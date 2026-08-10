@@ -1,0 +1,6 @@
+{
+  "name": "iLearnit-365",
+  "description": "AI-Powered, Cloud-Secured Learning Ecosystem for Students, Teachers, and Parents.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
