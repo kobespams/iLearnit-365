@@ -11,13 +11,23 @@ export const Footer: React.FC<FooterProps> = ({ onSelectRole }) => {
     <footer className="bg-[#0B1D3A] text-slate-300 border-t border-[#132C54] mt-20 py-12 px-4 sm:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-8 border-b border-slate-800">
-          <div>
-            <div className="font-sora font-extrabold text-2xl text-white tracking-tight flex items-center gap-1">
-              iLearnit<span className="text-[#CC9A2E]">-365</span>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden border border-cyan-400/30 bg-slate-950 p-0.5 shadow-md">
+              <img
+                src="/src/assets/images/ilearnit_logo_1786816502338.jpg"
+                alt="iLearnit-365 Logo"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain rounded-xl"
+              />
             </div>
-            <p className="text-xs text-slate-400 mt-1 max-w-md">
-              AI-Powered, Cloud-Secured Learning Ecosystem unifying students, educators, and families under one intelligent roof.
-            </p>
+            <div>
+              <div className="font-sora font-extrabold text-2xl text-white tracking-tight flex items-center gap-1">
+                iLearnit<span className="text-[#CC9A2E]">-365</span>
+              </div>
+              <p className="text-[10px] font-mono uppercase text-amber-400 font-bold">
+                Learn • Grow • Achieve
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-300">

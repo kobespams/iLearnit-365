@@ -82,8 +82,22 @@ export const SignInModal: React.FC<SignInModalProps> = ({
 
         {/* Header */}
         <div className="text-center space-y-1">
-          <div className="w-10 h-10 rounded-2xl bg-[#132C54] text-white flex items-center justify-center mx-auto mb-3 shadow-md">
-            <Lock className="w-5 h-5 text-[#CC9A2E]" />
+          <div className="relative inline-block mx-auto mb-2 group">
+            <div className="absolute -inset-1.5 bg-gradient-to-r from-cyan-500/30 to-amber-500/30 rounded-2xl blur-md opacity-75 group-hover:opacity-100 transition pointer-events-none animate-pulse-glow" />
+            <div className="cyber-logo-container relative w-16 h-16 rounded-2xl p-1 shadow-lg shadow-cyan-500/20">
+              <div className="cyber-scanline" />
+              <div className="absolute top-0.5 left-0.5 w-1.5 h-1.5 border-t border-l border-cyan-400 z-20 pointer-events-none" />
+              <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 border-t border-r border-cyan-400 z-20 pointer-events-none" />
+              <div className="absolute bottom-0.5 left-0.5 w-1.5 h-1.5 border-b border-l border-amber-400 z-20 pointer-events-none" />
+              <div className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 border-b border-r border-amber-400 z-20 pointer-events-none" />
+              <img
+                src="/src/assets/images/ilearnit_logo_1786816502338.jpg"
+                alt="iLearnit-365 Logo"
+                referrerPolicy="no-referrer"
+                className="relative z-10 w-full h-full object-cover rounded-xl"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-transparent pointer-events-none z-10" />
+            </div>
           </div>
           <h3 className="font-sora font-bold text-2xl text-[#0B1D3A]">Sign In to iLearnit-365</h3>
           <p className="text-xs text-[#5B6A88]">Enter your registered Student PIN or credentials.</p>

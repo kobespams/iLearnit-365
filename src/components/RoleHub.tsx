@@ -79,20 +79,58 @@ export const RoleHub: React.FC<RoleHubProps> = ({ onSelectRole }) => {
 
           {/* Hero Branding Floating Badge Card */}
           <div className="lg:col-span-5 flex justify-center relative">
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl relative max-w-sm w-full text-center space-y-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-gold to-amber-600 rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-gold/20 text-slate-950 font-extrabold text-3xl font-sora">
-                i365
+            <div className="group relative bg-slate-900/80 backdrop-blur-xl border border-blue-500/30 hover:border-blue-400/60 rounded-3xl p-6 sm:p-8 shadow-2xl relative max-w-sm w-full text-center space-y-4 transition-all duration-300 hover:shadow-blue-500/20 hover:-translate-y-1">
+              <div className="relative mx-auto w-32 h-32 sm:w-36 sm:h-36 rounded-3xl overflow-hidden shadow-2xl shadow-blue-500/30 border-2 border-amber-400/40 bg-slate-950 p-1 group-hover:scale-105 transition-transform duration-300">
+                <img
+                  src="/src/assets/images/ilearnit_logo_1786816502338.jpg"
+                  alt="iLearnit-365 Official Logo Emblem"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-2xl"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
               </div>
-              <h3 className="font-sora font-bold text-xl text-white">iLearnit-365 Ecosystem</h3>
-              <p className="text-xs text-slate-300">Smart, secure, and student-focused learning tools with encrypted real-time access tokens.</p>
 
-              <div className="pt-2 flex justify-center gap-2">
-                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold px-3 py-1 rounded-full">
-                  ☁ Cloud Learning
-                </span>
-                <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold px-3 py-1 rounded-full">
-                  🤖 Smart AI
-                </span>
+              <div>
+                <h3 className="font-sora font-extrabold text-2xl text-white tracking-tight flex items-center justify-center gap-1.5">
+                  iLearnit<span className="text-[#CC9A2E]">-365</span>
+                </h3>
+                <p className="text-[11px] font-mono tracking-widest uppercase text-amber-400 font-bold mt-0.5">
+                  Learn • Grow • Achieve
+                </p>
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                  Cloud learning, smart AI tutors, CBT examination engines &amp; real-time encrypted PIN security.
+                </p>
+              </div>
+
+              <div className="pt-2 grid grid-cols-2 gap-2 text-left">
+                <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-2.5 flex items-center gap-2">
+                  <span className="text-base">📖</span>
+                  <div>
+                    <div className="text-[10px] font-bold text-blue-300 uppercase">E-Learning</div>
+                    <div className="text-[10px] text-slate-400">JSS &amp; SSS Syllabus</div>
+                  </div>
+                </div>
+                <div className="bg-emerald-500/10 border border-emerald-400/20 rounded-xl p-2.5 flex items-center gap-2">
+                  <span className="text-base">🤖</span>
+                  <div>
+                    <div className="text-[10px] font-bold text-emerald-300 uppercase">Smart AI</div>
+                    <div className="text-[10px] text-slate-400">Step-by-step Tutor</div>
+                  </div>
+                </div>
+                <div className="bg-amber-500/10 border border-amber-400/20 rounded-xl p-2.5 flex items-center gap-2">
+                  <span className="text-base">🔐</span>
+                  <div>
+                    <div className="text-[10px] font-bold text-amber-300 uppercase">PIN Protocol</div>
+                    <div className="text-[10px] text-slate-400">4-Digit Auth Key</div>
+                  </div>
+                </div>
+                <div className="bg-purple-500/10 border border-purple-400/20 rounded-xl p-2.5 flex items-center gap-2">
+                  <span className="text-base">📊</span>
+                  <div>
+                    <div className="text-[10px] font-bold text-purple-300 uppercase">CBT &amp; GPA</div>
+                    <div className="text-[10px] text-slate-400">Instant Analytics</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -392,6 +430,48 @@ export const RoleHub: React.FC<RoleHubProps> = ({ onSelectRole }) => {
 
             <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-cyan-300 border border-cyan-400/40 group-hover:bg-cyan-500 group-hover:text-slate-950 px-4 py-2.5 rounded-xl transition-all">
               Explore Cybersecurity <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </span>
+          </button>
+
+          {/* Registrar Admin Card */}
+          <button
+            onClick={() => onSelectRole('admin')}
+            className="group relative bg-gradient-to-b from-slate-900 via-indigo-950 to-purple-950 border border-purple-500/40 hover:border-purple-400 rounded-3xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/20 flex flex-col justify-between cursor-pointer space-y-6 text-white"
+          >
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-400/30">
+                    Official Records
+                  </span>
+                </div>
+                <h3 className="font-sora font-bold text-lg text-white group-hover:text-purple-300 transition-colors mt-1.5">
+                  🏛️ Registrar Admin
+                </h3>
+                <p className="text-xs text-slate-300 mt-1">Student enrollment verification & credentials.</p>
+              </div>
+
+              <ul className="space-y-2 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Generate Reg. No. & Student PIN</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Download verification letters</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Send onboarding feedback emails</span>
+                </li>
+              </ul>
+            </div>
+
+            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-purple-300 border border-purple-400/40 group-hover:bg-purple-600 group-hover:text-white px-4 py-2.5 rounded-xl transition-all">
+              Open Registrar Console <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
           </button>
         </div>

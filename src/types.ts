@@ -1,4 +1,4 @@
-export type UserRole = 'hub' | 'login' | 'register' | 'student' | 'teacher' | 'parent' | 'jss_math' | 'cyber_security' | 'cca_music' | 'cbt';
+export type UserRole = 'hub' | 'login' | 'register' | 'student' | 'teacher' | 'parent' | 'jss_math' | 'cyber_security' | 'cca_music' | 'cbt' | 'admin';
 export type AppTab = 'workbench' | 'code' | 'vision' | 'notes';
 
 export interface RegisteredUser {

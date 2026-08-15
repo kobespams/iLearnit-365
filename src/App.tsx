@@ -8,6 +8,7 @@ import { ParentPortal } from './components/ParentPortal';
 import { JSSMathExplorer } from './components/JSSMathExplorer';
 import { CyberSecurityExplorer } from './components/CyberSecurityExplorer';
 import { CBTExamInterface } from './components/CBTExamInterface';
+import AdminDashboard from './components/AdminDashboard';
 import { LoginPage } from './components/LoginPage';
 import { RegistrationPage } from './components/RegistrationPage';
 import { SignInModal } from './components/SignInModal';
@@ -33,6 +34,12 @@ export default function App() {
   const [userName, setUserName] = useState('Alex Chen');
   const [activeStudent, setActiveStudent] = useState<StudentDetail>(CURRENT_STUDENT_PROFILE);
   const [announcements, setAnnouncements] = useState<Announcement[]>(INITIAL_ANNOUNCEMENTS);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   // Initialize theme and CSS variables on app mount
   useEffect(() => {
@@ -75,6 +82,12 @@ export default function App() {
       readBy: [currentUserId], // Author marks as read for themselves
     };
     setAnnouncements((prev) => [newAnn, ...prev]);
+    showToast('New announcement published to campus notice board.');
+  };
+
+  const handleDeleteAnnouncement = (id: string) => {
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+    showToast('Announcement removed from campus board.');
   };
 
   const handleSignInSuccess = (role: UserRole, name: string, student?: StudentDetail) => {
@@ -140,6 +153,10 @@ export default function App() {
           />
         )}
 
+        {currentRole === 'admin' && (
+          <AdminDashboard onNavigateRole={setCurrentRole} />
+        )}
+
         {currentRole === 'hub' && <RoleHub onSelectRole={setCurrentRole} />}
 
         {/* Protected Views (Requires Registration / Login) */}
@@ -178,7 +195,7 @@ export default function App() {
             {currentRole === 'jss_math' && (
               <JSSMathExplorer
                 onAssignToClass={(lesson) => {
-                  alert(`Assigned "${lesson.title}" (${lesson.level}) to JSS Class groups!`);
+                  showToast(`Successfully assigned "${lesson.title}" (${lesson.level}) to JSS Class groups!`);
                   setCurrentRole('teacher');
                 }}
               />
@@ -193,6 +210,7 @@ export default function App() {
                 announcements={announcements}
                 onMarkAnnouncementRead={handleMarkAnnouncementRead}
                 onMarkAllAnnouncementsRead={handleMarkAllAnnouncementsRead}
+                onDeleteAnnouncement={handleDeleteAnnouncement}
                 onAddAnnouncement={handleAddAnnouncement}
                 onNavigateRole={setCurrentRole}
               />
@@ -206,6 +224,7 @@ export default function App() {
                 onAddAnnouncement={handleAddAnnouncement}
                 onMarkAnnouncementRead={handleMarkAnnouncementRead}
                 onMarkAllAnnouncementsRead={handleMarkAllAnnouncementsRead}
+                onDeleteAnnouncement={handleDeleteAnnouncement}
                 onNavigateRole={setCurrentRole}
               />
             )}
@@ -238,6 +257,14 @@ export default function App() {
           setCurrentRole('register');
         }}
       />
+
+      {/* Global Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-[#0B1D3A] text-white px-5 py-3 rounded-2xl shadow-2xl border border-blue-500/40 text-xs font-semibold flex items-center gap-2.5 animate-fadeIn backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer onSelectRole={setCurrentRole} />

@@ -46,11 +46,13 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => onSelectRole('hub')}
           className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer shrink-0"
         >
-          <div className="w-9 h-9 rounded-xl bg-[#132C54] dark:bg-blue-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-            <svg className="w-6 h-6" viewBox="0 0 40 40" fill="none">
-              <path d="M20 3 C11 3 5 9 5 17c0 3 1 5.5 3 7.5L20 30l12-5.5c2-2 3-4.5 3-7.5C35 9 29 3 20 3Z" fill="#2F6FE0"/>
-              <path d="M20 34c-3 0-5.5-2-5.5-4.5V21l5.5 2.5 5.5-2.5v8.5c0 2.5-2.5 4.5-5.5 4.5Z" fill="#CC9A2E"/>
-            </svg>
+          <div className="relative w-10 h-10 rounded-2xl overflow-hidden shadow-md shadow-blue-950/20 group-hover:scale-105 group-hover:shadow-blue-500/30 transition-all border border-blue-500/30 bg-slate-900 p-0.5">
+            <img
+              src="/src/assets/images/ilearnit_logo_1786816502338.jpg"
+              alt="iLearnit-365 Logo"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-contain rounded-xl"
+            />
           </div>
           <div>
             <div className="font-sora font-extrabold text-xl text-[#0B1D3A] dark:text-slate-100 tracking-tight flex items-center gap-1">
@@ -139,6 +141,18 @@ export const Header: React.FC<HeaderProps> = ({
             <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>CBT Exam Suite</span>
             {!userSignedIn && <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.2 rounded font-bold">🔒 Locked</span>}
+          </button>
+
+          <button
+            onClick={() => onSelectRole('admin')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              currentRole === 'admin'
+                ? 'bg-gradient-to-r from-purple-700 to-indigo-800 text-white shadow-sm ring-1 ring-purple-400'
+                : 'text-purple-900 dark:text-purple-200 bg-purple-50/90 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+            <span>Registrar Admin</span>
           </button>
 
           <button
@@ -261,6 +275,15 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full text-left px-4 py-2 text-xs text-emerald-900 dark:text-emerald-300 font-bold hover:bg-emerald-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Universal CBT Exam Suite
+                  </button>
+                  <button
+                    onClick={() => {
+                      onSelectRole('admin');
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-purple-900 dark:text-purple-300 font-bold hover:bg-purple-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600" /> Registrar Admin Console
                   </button>
                   <div className="border-t border-[#ECF0F6] dark:border-slate-800 my-1"></div>
                   <button

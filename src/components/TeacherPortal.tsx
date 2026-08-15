@@ -13,6 +13,7 @@ interface TeacherPortalProps {
   onAddAnnouncement?: (newAnn: Omit<Announcement, 'id' | 'createdAt' | 'readBy'>) => void;
   onMarkAnnouncementRead?: (id: string) => void;
   onMarkAllAnnouncementsRead?: () => void;
+  onDeleteAnnouncement?: (id: string) => void;
   onNavigateRole?: (role: UserRole) => void;
 }
 
@@ -23,10 +24,17 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   onAddAnnouncement = () => {},
   onMarkAnnouncementRead = () => {},
   onMarkAllAnnouncementsRead = () => {},
+  onDeleteAnnouncement,
   onNavigateRole,
 }) => {
   const [activeTab, setActiveTab] = useState<'classes' | 'analytics' | 'jss-math' | 'broadcasts' | 'grading' | 'ai-lesson-gen'>('classes');
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(classes[0]);
+  const [assignedToast, setAssignedToast] = useState<string | null>(null);
+
+  const showAssignedToast = (msg: string) => {
+    setAssignedToast(msg);
+    setTimeout(() => setAssignedToast(null), 3500);
+  };
 
   // Grading Queue state
   const [gradingQueue, setGradingQueue] = useState([
@@ -320,7 +328,7 @@ Include:
       {activeTab === 'jss-math' && (
         <JSSMathExplorer
           onAssignToClass={(lesson) => {
-            alert(`Assigned "${lesson.title}" (${lesson.level}) to ${selectedClass.name}!`);
+            showAssignedToast(`Assigned "${lesson.title}" (${lesson.level}) to ${selectedClass.name}!`);
           }}
         />
       )}
@@ -332,6 +340,7 @@ Include:
           currentUserId="teacher-1"
           onMarkRead={onMarkAnnouncementRead}
           onMarkAllRead={onMarkAllAnnouncementsRead}
+          onDeleteAnnouncement={onDeleteAnnouncement}
           onAddAnnouncement={onAddAnnouncement}
           onNavigateRole={onNavigateRole}
           activeRole="teacher"
@@ -494,6 +503,13 @@ Include:
               </div>
             </div>
           </div>
+        </div>
+      )}
+      {/* Assignment Feedback Toast */}
+      {assignedToast && (
+        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 bg-[#2E9B58] text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2.5 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-white" />
+          <span>{assignedToast}</span>
         </div>
       )}
     </div>

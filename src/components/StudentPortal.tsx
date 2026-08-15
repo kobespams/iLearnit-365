@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Course, Assignment, StudentDetail, QuizQuestion, Announcement, UserRole } from '../types';
 import { generateContent } from '../services/api';
-import { GraduationCap, BookOpen, Clock, Award, CheckCircle2, Send, Sparkles, AlertCircle, HelpCircle, RefreshCw, ChevronRight, Calculator, Calendar, Timer, Filter, ShieldCheck, Megaphone, Bell } from 'lucide-react';
+import { GraduationCap, BookOpen, Clock, Award, CheckCircle2, Send, Sparkles, AlertCircle, HelpCircle, RefreshCw, ChevronRight, Calculator, Calendar, Timer, Filter, ShieldCheck, Megaphone, Bell, Trash2 } from 'lucide-react';
 import { JSSMathExplorer } from './JSSMathExplorer';
 import { WeeklyStudyScheduler } from './WeeklyStudyScheduler';
 import { PomodoroTimer } from './PomodoroTimer';
 import { CyberSecurityExplorer } from './CyberSecurityExplorer';
 import { StudentAnnouncementsBoard } from './StudentAnnouncementsBoard';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface StudentPortalProps {
   student: StudentDetail;
@@ -16,6 +17,7 @@ interface StudentPortalProps {
   announcements?: Announcement[];
   onMarkAnnouncementRead?: (id: string) => void;
   onMarkAllAnnouncementsRead?: () => void;
+  onDeleteAnnouncement?: (id: string) => void;
   onAddAnnouncement?: (newAnn: Omit<Announcement, 'id' | 'createdAt' | 'readBy'>) => void;
   onNavigateRole?: (role: UserRole) => void;
 }
@@ -28,6 +30,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   announcements = [],
   onMarkAnnouncementRead = () => {},
   onMarkAllAnnouncementsRead = () => {},
+  onDeleteAnnouncement,
   onAddAnnouncement = () => {},
   onNavigateRole,
 }) => {
@@ -45,6 +48,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     },
   ]);
   const [loadingTutor, setLoadingTutor] = useState(false);
+  const [showClearTutorModal, setShowClearTutorModal] = useState(false);
 
   // Quiz State
   const [quizIndex, setQuizIndex] = useState(0);
@@ -537,6 +541,7 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
           currentUserId={student.id || student.studentId || 'st-101'}
           onMarkRead={onMarkAnnouncementRead}
           onMarkAllRead={onMarkAllAnnouncementsRead}
+          onDeleteAnnouncement={onDeleteAnnouncement}
           onAddAnnouncement={onAddAnnouncement}
           onNavigateRole={onNavigateRole}
           activeRole="student"
@@ -771,19 +776,32 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
               <p className="text-xs text-[#5B6A88]">Interactive 1-on-1 step-by-step tutoring and problem solving.</p>
             </div>
 
-            {/* Subject Dropdown */}
-            <div className="flex items-center gap-2 bg-[#F6F8FB] border border-[#D8DFEA] px-3 py-1.5 rounded-xl text-xs font-semibold text-[#0B1D3A]">
-              <span>Subject:</span>
-              <select
-                value={tutorSubject}
-                onChange={(e) => setTutorSubject(e.target.value)}
-                className="bg-transparent font-medium text-[#2F6FE0] focus:outline-none cursor-pointer"
-              >
-                <option value="Computer Science">Computer Science</option>
-                <option value="Calculus">AP Calculus BC</option>
-                <option value="Physics">Physics II</option>
-                <option value="Literature">World Literature</option>
-              </select>
+            {/* Controls: Subject Dropdown & Clear Messages */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-[#F6F8FB] border border-[#D8DFEA] px-3 py-1.5 rounded-xl text-xs font-semibold text-[#0B1D3A]">
+                <span>Subject:</span>
+                <select
+                  value={tutorSubject}
+                  onChange={(e) => setTutorSubject(e.target.value)}
+                  className="bg-transparent font-medium text-[#2F6FE0] focus:outline-none cursor-pointer"
+                >
+                  <option value="Computer Science">Computer Science</option>
+                  <option value="Calculus">AP Calculus BC</option>
+                  <option value="Physics">Physics II</option>
+                  <option value="Literature">World Literature</option>
+                </select>
+              </div>
+
+              {tutorMessages.length > 1 && (
+                <button
+                  onClick={() => setShowClearTutorModal(true)}
+                  title="Clear conversation history"
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-all cursor-pointer"
+                  aria-label="Clear chat messages"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -836,6 +854,26 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal for Clearing AI Tutor Messages */}
+      <ConfirmationModal
+        isOpen={showClearTutorModal}
+        onClose={() => setShowClearTutorModal(false)}
+        onConfirm={() => {
+          setTutorMessages([
+            {
+              sender: 'ai',
+              text: `Hello ${student.name}! I am your iLearnit-365 AI Study Companion. How can I help you prepare for ${tutorSubject} today?`,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]);
+          setShowClearTutorModal(false);
+        }}
+        actionType="delete"
+        title="Clear Tutor Conversation?"
+        description="Are you sure you want to reset this study conversation? All current study messages and problem explanations will be cleared."
+        confirmLabel="Yes, Clear Chat"
+      />
     </div>
   );
 };

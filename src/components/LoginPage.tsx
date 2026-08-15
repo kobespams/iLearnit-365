@@ -98,6 +98,47 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-gold/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 space-y-6">
+            {/* Dark Digital Animation Container for iLearnit Logo */}
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                {/* Ambient Neon Glow Halo */}
+                <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/40 via-blue-600/30 to-amber-500/40 rounded-2xl blur-lg opacity-80 group-hover:opacity-100 transition duration-500 animate-pulse-glow pointer-events-none" />
+                
+                {/* Digital Container with Scanline & Cyber Brackets */}
+                <div className="cyber-logo-container relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl shadow-xl p-1 transition-transform duration-300 group-hover:scale-105">
+                  {/* Scanline Sweep Overlay */}
+                  <div className="cyber-scanline" />
+
+                  {/* Corner Tech Brackets */}
+                  <div className="absolute top-0.5 left-0.5 w-2 h-2 border-t-2 border-l-2 border-cyan-400 z-20 pointer-events-none" />
+                  <div className="absolute top-0.5 right-0.5 w-2 h-2 border-t-2 border-r-2 border-cyan-400 z-20 pointer-events-none" />
+                  <div className="absolute bottom-0.5 left-0.5 w-2 h-2 border-b-2 border-l-2 border-amber-400 z-20 pointer-events-none" />
+                  <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b-2 border-r-2 border-amber-400 z-20 pointer-events-none" />
+
+                  <img
+                    src="/src/assets/images/ilearnit_logo_1786816502338.jpg"
+                    alt="iLearnit-365 Logo"
+                    referrerPolicy="no-referrer"
+                    className="relative z-10 w-full h-full object-cover rounded-xl"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none z-10" />
+                </div>
+              </div>
+
+              <div>
+                <div className="font-sora font-extrabold text-xl text-white tracking-tight">
+                  iLearnit<span className="text-[#CC9A2E]">-365</span>
+                </div>
+                <div className="text-[11px] font-mono text-cyan-300 font-bold uppercase tracking-wider">
+                  Learn • Grow • Achieve
+                </div>
+                <div className="text-[9px] font-mono text-slate-400 mt-0.5 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Cloud Education Gateway</span>
+                </div>
+              </div>
+            </div>
+
             <div className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider font-mono">
               <ShieldCheck className="w-3.5 h-3.5 text-gold" /> Registered Access Gate
             </div>
@@ -107,7 +148,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 Sign In to iLearnit-365
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                Course outlines, JSS math syllabus, homework assignments, and practice tools require verified student or faculty authentication.
+                Course outlines, JSS math syllabus, CBT exam suite, homework assignments, and AI tutors require verified student or faculty authentication.
               </p>
             </div>
 
