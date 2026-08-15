@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
-import { Course, Assignment, StudentDetail, QuizQuestion } from '../types';
+import { Course, Assignment, StudentDetail, QuizQuestion, Announcement, UserRole } from '../types';
 import { generateContent } from '../services/api';
-import { GraduationCap, BookOpen, Clock, Award, CheckCircle2, Send, Sparkles, AlertCircle, HelpCircle, RefreshCw, ChevronRight, Calculator, Calendar } from 'lucide-react';
+import { GraduationCap, BookOpen, Clock, Award, CheckCircle2, Send, Sparkles, AlertCircle, HelpCircle, RefreshCw, ChevronRight, Calculator, Calendar, Timer, Filter, ShieldCheck, Megaphone, Bell } from 'lucide-react';
 import { JSSMathExplorer } from './JSSMathExplorer';
 import { WeeklyStudyScheduler } from './WeeklyStudyScheduler';
+import { PomodoroTimer } from './PomodoroTimer';
+import { CyberSecurityExplorer } from './CyberSecurityExplorer';
+import { StudentAnnouncementsBoard } from './StudentAnnouncementsBoard';
 
 interface StudentPortalProps {
   student: StudentDetail;
   courses: Course[];
   assignments: Assignment[];
   quizQuestions: QuizQuestion[];
+  announcements?: Announcement[];
+  onMarkAnnouncementRead?: (id: string) => void;
+  onMarkAllAnnouncementsRead?: () => void;
+  onAddAnnouncement?: (newAnn: Omit<Announcement, 'id' | 'createdAt' | 'readBy'>) => void;
+  onNavigateRole?: (role: UserRole) => void;
 }
 
 export const StudentPortal: React.FC<StudentPortalProps> = ({
@@ -17,8 +25,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   courses,
   assignments,
   quizQuestions,
+  announcements = [],
+  onMarkAnnouncementRead = () => {},
+  onMarkAllAnnouncementsRead = () => {},
+  onAddAnnouncement = () => {},
+  onNavigateRole,
 }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'courses' | 'jss-math' | 'study-scheduler' | 'quiz' | 'ai-tutor'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'announcements' | 'courses' | 'jss-math' | 'cyber-security' | 'study-scheduler' | 'pomodoro' | 'quiz' | 'ai-tutor'>('dashboard');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('All');
   
   // AI Tutor state
   const [tutorQuery, setTutorQuery] = useState('');
@@ -42,6 +56,24 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
   // Pending assignment completion state
   const [localAssignments, setLocalAssignments] = useState<Assignment[]>(assignments);
+
+  const unreadAnnouncementsCount = announcements.filter(
+    (a) => !a.readBy.includes(student.id || student.studentId || 'st-101')
+  ).length;
+
+  // Subject-filtered data views
+  const filteredCourses = selectedSubjectFilter === 'All'
+    ? courses
+    : courses.filter((c) =>
+        c.title.toLowerCase().includes(selectedSubjectFilter.toLowerCase()) ||
+        c.code.toLowerCase().includes(selectedSubjectFilter.toLowerCase())
+      );
+
+  const filteredAssignments = selectedSubjectFilter === 'All'
+    ? localAssignments
+    : localAssignments.filter((a) =>
+        a.courseTitle.toLowerCase().includes(selectedSubjectFilter.toLowerCase())
+      );
 
   const fetchAiExplanationForQuiz = async (qIndex: number, chosenOptionIdx: number) => {
     const q = quizQuestions[qIndex];
@@ -191,6 +223,24 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
             Overview
           </button>
           <button
+            id="student-announcements-tab-btn"
+            onClick={() => setActiveTab('announcements')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${
+              activeTab === 'announcements'
+                ? 'bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white shadow-sm ring-1 ring-blue-400'
+                : 'text-indigo-900 bg-indigo-50/90 hover:bg-indigo-100 border border-indigo-200'
+            }`}
+          >
+            <Megaphone className="w-3.5 h-3.5 text-amber-500" />
+            <span>Announcements</span>
+            {unreadAnnouncementsCount > 0 && (
+              <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse shadow-xs flex items-center gap-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                {unreadAnnouncementsCount}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab('jss-math')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'jss-math'
@@ -201,6 +251,16 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
             <Calculator className="w-3.5 h-3.5" /> JSS Math Syllabus
           </button>
           <button
+            onClick={() => setActiveTab('cyber-security')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'cyber-security'
+                ? 'bg-gradient-to-r from-indigo-700 via-blue-700 to-cyan-700 text-white shadow-sm ring-1 ring-cyan-400'
+                : 'text-indigo-900 bg-indigo-50/90 hover:bg-indigo-100 border border-indigo-200'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-600" /> Cybersecurity Academy
+          </button>
+          <button
             onClick={() => setActiveTab('study-scheduler')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'study-scheduler'
@@ -209,6 +269,16 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
             }`}
           >
             <Calendar className="w-3.5 h-3.5" /> Weekly Study Scheduler
+          </button>
+          <button
+            onClick={() => setActiveTab('pomodoro')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'pomodoro'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-amber-800 bg-amber-50/80 hover:bg-amber-100'
+            }`}
+          >
+            <Timer className="w-3.5 h-3.5" /> Pomodoro Timer
           </button>
           <button
             onClick={() => setActiveTab('courses')}
@@ -240,6 +310,34 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
           >
             <Sparkles className="w-3.5 h-3.5 text-[#CC9A2E]" /> AI Tutor
           </button>
+        </div>
+      </div>
+
+      {/* Subject Filter Bar */}
+      <div className="bg-white border border-[#D8DFEA] rounded-2xl p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-bold text-navy font-mono">
+          <Filter className="w-3.5 h-3.5 text-blue-600" />
+          <span>Subject Filter:</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {['All', 'Mathematics', 'Computer Science', 'Physics', 'Literature'].map((subj) => (
+            <button
+              key={subj}
+              onClick={() => {
+                setSelectedSubjectFilter(subj);
+                if (subj !== 'All') {
+                  setTutorSubject(subj);
+                }
+              }}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                selectedSubjectFilter === subj
+                  ? 'bg-navy text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {subj}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -284,7 +382,45 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
 
       {/* TAB CONTENT: DASHBOARD */}
       {activeTab === 'dashboard' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="space-y-6">
+          {/* Latest Campus Announcements Spotlight Banner */}
+          {announcements.length > 0 && (
+            <div className="bg-gradient-to-r from-[#132C54] via-[#1E3A8A] to-[#0B1D3A] rounded-3xl p-5 text-white shadow-md border border-blue-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 text-slate-950 flex items-center justify-center font-bold shrink-0 mt-0.5 shadow-md">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-300">
+                      Live Campus Broadcast
+                    </span>
+                    {unreadAnnouncementsCount > 0 && (
+                      <span className="bg-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                        {unreadAnnouncementsCount} UNREAD
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-sora font-bold text-sm text-white mt-0.5">
+                    {announcements[0].title}
+                  </h4>
+                  <p className="text-xs text-slate-300 line-clamp-1 mt-0.5">
+                    {announcements[0].author} • {announcements[0].message}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('announcements')}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Open Notice Board ({announcements.length})</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Courses Progress (8 cols) */}
           <div className="lg:col-span-8 space-y-6">
             <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm">
@@ -301,7 +437,7 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
               </div>
 
               <div className="space-y-4">
-                {courses.map((course) => (
+                {(filteredCourses.length > 0 ? filteredCourses : courses).map((course) => (
                   <div key={course.id} className="p-4 rounded-2xl bg-[#F6F8FB] border border-[#D8DFEA] hover:border-[#2F6FE0]/40 transition-all">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <div>
@@ -341,7 +477,7 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
               </h3>
 
               <div className="space-y-3">
-                {localAssignments.map((assignment) => (
+                {(filteredAssignments.length > 0 ? filteredAssignments : localAssignments).map((assignment) => (
                   <div key={assignment.id} className="p-3.5 rounded-2xl bg-[#F6F8FB] border border-[#D8DFEA] space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -390,7 +526,22 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
               </button>
             </div>
           </div>
+          </div>
         </div>
+      )}
+
+      {/* TAB CONTENT: ANNOUNCEMENTS & NOTICE BOARD */}
+      {activeTab === 'announcements' && (
+        <StudentAnnouncementsBoard
+          announcements={announcements}
+          currentUserId={student.id || student.studentId || 'st-101'}
+          onMarkRead={onMarkAnnouncementRead}
+          onMarkAllRead={onMarkAllAnnouncementsRead}
+          onAddAnnouncement={onAddAnnouncement}
+          onNavigateRole={onNavigateRole}
+          activeRole="student"
+          userName={student.name}
+        />
       )}
 
       {/* TAB CONTENT: JSS MATH */}
@@ -398,9 +549,27 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
         <JSSMathExplorer />
       )}
 
+      {/* TAB CONTENT: CYBERSECURITY ACADEMY & ASSESSMENTS */}
+      {activeTab === 'cyber-security' && (
+        <CyberSecurityExplorer
+          onBack={() => setActiveTab('dashboard')}
+          currentUser={{
+            name: student.name,
+            role: 'student',
+            studentId: student.id,
+            classGrade: student.classGrade,
+          }}
+        />
+      )}
+
       {/* TAB CONTENT: WEEKLY STUDY SCHEDULER */}
       {activeTab === 'study-scheduler' && (
         <WeeklyStudyScheduler student={student} />
+      )}
+
+      {/* TAB CONTENT: POMODORO TIMER */}
+      {activeTab === 'pomodoro' && (
+        <PomodoroTimer />
       )}
 
       {/* TAB CONTENT: COURSES */}

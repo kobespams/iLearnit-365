@@ -1,6 +1,23 @@
 import React from 'react';
 import { UserRole } from '../types';
-import { BookOpen, Award, Sparkles, ArrowRight, ShieldCheck, Cloud, Cpu, LineChart, BookMarked } from 'lucide-react';
+import { 
+  BookOpen, 
+  Award, 
+  Sparkles, 
+  ArrowRight, 
+  ShieldCheck, 
+  Cloud, 
+  Cpu, 
+  LineChart, 
+  BookMarked,
+  GraduationCap,
+  Users,
+  CheckCircle2,
+  KeyRound,
+  Calculator,
+  Compass,
+  UserPlus
+} from 'lucide-react';
 
 interface RoleHubProps {
   onSelectRole: (role: UserRole) => void;
@@ -8,174 +25,375 @@ interface RoleHubProps {
 
 export const RoleHub: React.FC<RoleHubProps> = ({ onSelectRole }) => {
   return (
-    <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+    <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16 space-y-20">
       {/* Background Circuit Texture */}
       <div className="bg-field" />
 
-      {/* Hero Header */}
-      <section className="text-center max-w-3xl mx-auto space-y-4">
-        <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#2E9B58] bg-[#2E9B58]/10 border border-[#2E9B58]/20 px-3.5 py-1.5 rounded-full mono animate-fade-up">
-          <span className="w-2 h-2 rounded-full bg-[#2E9B58] animate-ping"></span>
-          AI-Powered · Cloud-Secured Learning
-        </div>
+      {/* HERO SECTION */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-navy to-indigo-950 text-white rounded-3xl p-8 sm:p-14 border border-blue-500/20 shadow-2xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-gold/10 rounded-full blur-3xl pointer-events-none" />
 
-        <h1 className="font-sora font-extrabold text-4xl sm:text-6xl tracking-tight text-[#0B1D3A] leading-tight">
-          Learn. Grow. <span className="bg-gradient-to-r from-[#2E9B58] via-[#CC9A2E] to-[#132C54] bg-clip-text text-transparent">Achieve.</span>
-        </h1>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center relative z-10">
+          <div className="lg:col-span-7 space-y-6">
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-400/20 px-3.5 py-1.5 rounded-full font-mono uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-gold" /> ✦ THE SMART EDUCATION PLATFORM
+            </div>
 
-        <p className="text-base sm:text-lg text-[#4C5A75] leading-relaxed max-w-2xl mx-auto">
-          One secure ecosystem for every side of education — built for students who study, teachers who guide, and parents who stay close to it all.
-        </p>
-      </section>
+            <h1 className="font-sora font-extrabold text-4xl sm:text-6xl tracking-tight text-white leading-tight">
+              Learn. <span className="text-blue-400">Grow.</span> <span className="text-gold italic font-serif">Achieve.</span> Every Day.
+            </h1>
 
-      {/* Role Hub Card Grid & Circuit Connection */}
-      <section className="relative max-w-5xl mx-auto mt-14 sm:mt-20">
-        <p className="text-center text-xs font-semibold uppercase tracking-widest text-[#7A8AA8] font-mono mb-12">
-          Choose how you enter
-        </p>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl">
+              Welcome to <strong className="text-white">iLearnit-365</strong> — a modern digital learning platform connecting students, teachers, schools, and families through secure, intelligent, and accessible education technology.
+            </p>
 
-        {/* SVG Wires (desktop) */}
-        <div className="hidden md:block absolute -top-12 left-0 right-0 h-32 pointer-events-none z-0">
-          <svg className="w-full h-full overflow-visible" viewBox="0 0 900 140" preserveAspectRatio="none">
-            <path d="M450,0 L450,40 L150,40 L150,80" fill="none" stroke="#2F6FE0" strokeWidth="2" className="wire-path" />
-            <path d="M450,0 L450,60 L450,80" fill="none" stroke="#2E9B58" strokeWidth="2" className="wire-path" />
-            <path d="M450,0 L450,40 L750,40 L750,80" fill="none" stroke="#CC9A2E" strokeWidth="2" className="wire-path" />
-            
-            <circle cx="150" cy="40" r="4" fill="#2F6FE0" className="wire-node" style={{ animationDelay: '0.7s' }} />
-            <circle cx="450" cy="60" r="4" fill="#2E9B58" className="wire-node" style={{ animationDelay: '0.85s' }} />
-            <circle cx="750" cy="40" r="4" fill="#CC9A2E" className="wire-node" style={{ animationDelay: '1s' }} />
-          </svg>
-        </div>
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={() => onSelectRole('register')}
+                className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 hover:opacity-95 text-white font-sora font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-2xl transition shadow-lg flex items-center gap-2 cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4 text-gold" /> Register & Generate Real-Time PIN
+              </button>
 
-        {/* Central Core Badge */}
-        <div className="relative z-20 flex justify-center mb-8 md:-mt-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#132C54] to-[#0B1D3A] flex items-center justify-center shadow-xl shadow-[#132C54]/30 border border-white/20 hover:scale-110 transition-transform">
-            <svg className="w-8 h-8 text-[#F6F8FB]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M12 2l8 4-8 4-8-4 8-4Z" />
-              <path d="M4 6v6l8 4 8-4V6" />
-            </svg>
+              <button
+                onClick={() => onSelectRole('login')}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-sora font-bold text-xs sm:text-sm px-6 py-3.5 rounded-2xl transition flex items-center gap-2 cursor-pointer"
+              >
+                <KeyRound className="w-4 h-4 text-gold" /> Sign In to Portal
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-6 pt-4 text-xs text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> E-Learning
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> AI-Powered
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Real-Time PIN Protocol
+              </span>
+            </div>
+          </div>
+
+          {/* Hero Branding Floating Badge Card */}
+          <div className="lg:col-span-5 flex justify-center relative">
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl relative max-w-sm w-full text-center space-y-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-gold to-amber-600 rounded-3xl flex items-center justify-center mx-auto shadow-lg shadow-gold/20 text-slate-950 font-extrabold text-3xl font-sora">
+                i365
+              </div>
+              <h3 className="font-sora font-bold text-xl text-white">iLearnit-365 Ecosystem</h3>
+              <p className="text-xs text-slate-300">Smart, secure, and student-focused learning tools with encrypted real-time access tokens.</p>
+
+              <div className="pt-2 flex justify-center gap-2">
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold px-3 py-1 rounded-full">
+                  ☁ Cloud Learning
+                </span>
+                <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold px-3 py-1 rounded-full">
+                  🤖 Smart AI
+                </span>
+              </div>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* JSS Math Curriculum Featured Banner */}
-        <div className="mb-8 bg-gradient-to-r from-blue-900 via-navy to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-blue-500/30 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2 relative z-10 max-w-xl">
-            <div className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-gold" /> JSS1 • JSS2 • JSS3 Mathematics Lessons
+      {/* REGISTERED CURRICULUM ACCESS BANNER */}
+      <section className="bg-gradient-to-r from-blue-950 via-navy to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-blue-500/30 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="space-y-2 relative z-10 max-w-2xl">
+          <div className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+            <ShieldCheck className="w-3.5 h-3.5 text-gold" /> Registered Student & Teacher Access
+          </div>
+          <h3 className="font-sora font-extrabold text-2xl text-white">
+            Course Outlines & Learning Portal Access
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Registered students and teachers get full access to the Junior & Senior Secondary syllabus (JSS1-JSS3 Math, Integrated Science, Computer Studies, Literature), step-by-step worked examples, practice quizzes, and the Pomodoro focus timer.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 relative z-10 shrink-0">
+          <button
+            onClick={() => onSelectRole('register')}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-gold to-amber-600 text-slate-950 font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-2xl hover:opacity-90 transition shadow-lg cursor-pointer"
+          >
+            Register Profile <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </section>
+
+      {/* FEATURES GRID (4-COLUMNS) */}
+      <section className="space-y-8">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest font-mono">
+            One Platform • Many Possibilities
+          </span>
+          <h2 className="text-3xl font-extrabold font-sora text-navy">
+            Everything you need to make learning smarter
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500">
+            iLearnit-365 brings e-learning, academic performance tracking, and smart tools together in one secure ecosystem.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:border-blue-400 transition-all space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xl">
+              📚
             </div>
-            <h3 className="font-sora font-extrabold text-2xl text-white">
-              Junior Secondary Mathematics Syllabus
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Explore all 19 official curriculum modules from Number & Numeration to Quadratic Equations, Pythagoras Theorem, and BECE prep. Features interactive step-by-step worked examples, teacher guides, and AI problem solvers.
+            <h3 className="font-sora font-bold text-base text-navy">E-Learning</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Access lessons, study materials, assignments, practice quizzes, and revision resources anytime.
             </p>
           </div>
 
-          <button
-            onClick={() => onSelectRole('jss_math')}
-            className="relative z-10 inline-flex items-center gap-2 bg-gradient-to-r from-gold to-amber-600 text-slate-950 font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-2xl hover:opacity-90 transition shadow-lg shrink-0 cursor-pointer"
-          >
-            Open JSS Math Explorer <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:border-emerald-400 transition-all space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl">
+              ☁
+            </div>
+            <h3 className="font-sora font-bold text-base text-navy">Cloud Learning</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Keep your educational resources, assignments, and study logs synced seamlessly across devices.
+            </p>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:border-amber-400 transition-all space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xl">
+              ⚙
+            </div>
+            <h3 className="font-sora font-bold text-base text-navy">Smart Education</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Use Gemini AI step-by-step tutors, diagnostic quiz analysis, and personalized study planners.
+            </p>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:border-indigo-400 transition-all space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xl">
+              🔐
+            </div>
+            <h3 className="font-sora font-bold text-base text-navy">Real-Time PIN Security</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Protected 4-digit Student PIN authentication ensures parents and students safely view academic records.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS - 3-STEP JOURNEY */}
+      <section className="bg-gradient-to-br from-navy via-slate-900 to-indigo-950 text-white rounded-3xl p-8 sm:p-12 space-y-10">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-xs font-bold text-gold uppercase tracking-widest font-mono">
+            Your Learning Journey
+          </span>
+          <h2 className="text-3xl font-extrabold font-sora text-white">
+            Start in three simple steps
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-300">
+            Register your profile, receive your unique PIN in real-time, and keep moving forward every single day.
+          </p>
         </div>
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3 relative">
+            <div className="w-10 h-10 rounded-full bg-gold text-slate-950 font-extrabold flex items-center justify-center text-sm font-sora">
+              01
+            </div>
+            <h3 className="font-sora font-bold text-lg text-white">Register Profile & Generate PIN</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Complete the security onboarding form to receive a real-time, collision-safe 4-digit Student Access PIN.
+            </p>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3 relative">
+            <div className="w-10 h-10 rounded-full bg-gold text-slate-950 font-extrabold flex items-center justify-center text-sm font-sora">
+              02
+            </div>
+            <h3 className="font-sora font-bold text-lg text-white">Learn & Practice</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Explore subject courses, complete assignments, take practice quizzes, and use the Pomodoro timer.
+            </p>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3 relative">
+            <div className="w-10 h-10 rounded-full bg-gold text-slate-950 font-extrabold flex items-center justify-center text-sm font-sora">
+              03
+            </div>
+            <h3 className="font-sora font-bold text-lg text-white">Track Progress & Results</h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Monitor cumulative GPA, attendance logs, term-by-term score breakdowns, and teacher notes in real time.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* CHOOSE YOUR PORTAL GRID */}
+      <section className="space-y-8">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-widest font-mono">
+            Role-Based Access
+          </span>
+          <h2 className="text-3xl font-extrabold font-sora text-navy">
+            Choose Your Learning Portal
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500">
+            Dedicated interfaces tailored specifically for students, parents, and educators.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Student Card */}
           <button
             onClick={() => onSelectRole('student')}
-            className="group relative bg-white border border-[#D8DFEA] hover:border-[#2F6FE0] rounded-3xl p-8 text-center transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#2F6FE0]/20 flex flex-col justify-between cursor-pointer"
+            className="group relative bg-white border border-slate-200 hover:border-blue-500 rounded-3xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-500/10 flex flex-col justify-between cursor-pointer space-y-6"
           >
-            <div>
-              <div className="w-14 h-14 rounded-2xl bg-[#2F6FE0]/10 text-[#2F6FE0] flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform">
-                <BookOpen className="w-7 h-7" />
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <GraduationCap className="w-6 h-6" />
               </div>
-              <h3 className="font-sora font-bold text-xl text-[#0B1D3A] mb-2 group-hover:text-[#2F6FE0] transition-colors">
-                Student
-              </h3>
-              <p className="text-sm text-[#5B6A88] leading-relaxed mb-6 min-h-[48px]">
-                Your courses, progress, and assignments — all in one focused view.
-              </p>
+              <div>
+                <h3 className="font-sora font-bold text-lg text-navy group-hover:text-blue-600 transition-colors">
+                  🎓 Student Portal
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Personal learning command center.</p>
+              </div>
+
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Courses, lessons & tasks</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Pomodoro study focus timer</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>AI diagnostic feedback</span>
+                </li>
+              </ul>
             </div>
 
-            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-[#2F6FE0] border border-[#2F6FE0] group-hover:bg-[#2F6FE0] group-hover:text-white px-5 py-2.5 rounded-full transition-all">
-              Enter as Student <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-blue-600 border border-blue-500 group-hover:bg-blue-600 group-hover:text-white px-4 py-2.5 rounded-xl transition-all">
+              Launch Student Portal <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
           </button>
 
           {/* Teacher Card */}
           <button
             onClick={() => onSelectRole('teacher')}
-            className="group relative bg-white border border-[#D8DFEA] hover:border-[#2E9B58] rounded-3xl p-8 text-center transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#2E9B58]/20 flex flex-col justify-between cursor-pointer"
+            className="group relative bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-500/10 flex flex-col justify-between cursor-pointer space-y-6"
           >
-            <div>
-              <div className="w-14 h-14 rounded-2xl bg-[#2E9B58]/10 text-[#2E9B58] flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform">
-                <BookMarked className="w-7 h-7" />
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <BookMarked className="w-6 h-6" />
               </div>
-              <h3 className="font-sora font-bold text-xl text-[#0B1D3A] mb-2 group-hover:text-[#2E9B58] transition-colors">
-                Teacher
-              </h3>
-              <p className="text-sm text-[#5B6A88] leading-relaxed mb-6 min-h-[48px]">
-                Manage classes, track outcomes, and guide every learner forward.
-              </p>
+              <div>
+                <h3 className="font-sora font-bold text-lg text-navy group-hover:text-emerald-600 transition-colors">
+                  🏫 Teacher Portal
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Class management & evaluations.</p>
+              </div>
+
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Manage classes & materials</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Evaluate student scores & rank</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Publish official teacher notes</span>
+                </li>
+              </ul>
             </div>
 
-            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-[#2E9B58] border border-[#2E9B58] group-hover:bg-[#2E9B58] group-hover:text-white px-5 py-2.5 rounded-full transition-all">
-              Enter as Teacher <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-emerald-600 border border-emerald-500 group-hover:bg-emerald-600 group-hover:text-white px-4 py-2.5 rounded-xl transition-all">
+              Launch Teacher Portal <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
           </button>
 
           {/* Parent Card */}
           <button
             onClick={() => onSelectRole('parent')}
-            className="group relative bg-white border border-[#D8DFEA] hover:border-[#CC9A2E] rounded-3xl p-8 text-center transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#CC9A2E]/20 flex flex-col justify-between cursor-pointer"
+            className="group relative bg-white border border-slate-200 hover:border-amber-500 rounded-3xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-amber-500/10 flex flex-col justify-between cursor-pointer space-y-6"
           >
-            <div>
-              <div className="w-14 h-14 rounded-2xl bg-[#CC9A2E]/10 text-[#CC9A2E] flex items-center justify-center mx-auto mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform">
-                <Award className="w-7 h-7" />
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Award className="w-6 h-6" />
               </div>
-              <h3 className="font-sora font-bold text-xl text-[#0B1D3A] mb-2 group-hover:text-[#CC9A2E] transition-colors">
-                Parent
-              </h3>
-              <p className="text-sm text-[#5B6A88] leading-relaxed mb-6 min-h-[48px]">
-                See how your child is doing, and stay connected to their growth.
-              </p>
+              <div>
+                <h3 className="font-sora font-bold text-lg text-navy group-hover:text-amber-600 transition-colors">
+                  👨‍👩‍👧 Parent Portal
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Verified academic tracking.</p>
+              </div>
+
+              <ul className="space-y-2 text-xs text-slate-600">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Instant Student PIN lookup</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Term-by-term GPA breakdown</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Direct teacher communication</span>
+                </li>
+              </ul>
             </div>
 
-            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-[#CC9A2E] border border-[#CC9A2E] group-hover:bg-[#CC9A2E] group-hover:text-white px-5 py-2.5 rounded-full transition-all">
-              Enter as Parent <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-amber-600 border border-amber-500 group-hover:bg-amber-600 group-hover:text-white px-4 py-2.5 rounded-xl transition-all">
+              Launch Parent Portal <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
           </button>
-        </div>
-      </section>
 
-      {/* Feature Strip */}
-      <section className="max-w-5xl mx-auto mt-16 sm:mt-24 pt-8 border-t border-[#D8DFEA]">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 text-xs font-semibold text-[#41527A]">
-          <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur p-3.5 rounded-2xl border border-[#D8DFEA]/80 shadow-sm">
-            <BookOpen className="w-4 h-4 text-[#132C54]" />
-            <span>E-Learning</span>
-          </div>
+          {/* Cyber Security Portal Card */}
+          <button
+            onClick={() => onSelectRole('cyber_security')}
+            className="group relative bg-gradient-to-b from-indigo-950/95 to-slate-950 border border-indigo-500/40 hover:border-cyan-400 rounded-3xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/20 flex flex-col justify-between cursor-pointer space-y-6 text-white"
+          >
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-400/30">
+                    10-Q Weekly Exams
+                  </span>
+                </div>
+                <h3 className="font-sora font-bold text-lg text-white group-hover:text-cyan-300 transition-colors mt-1.5">
+                  🛡️ Cybersecurity Academy
+                </h3>
+                <p className="text-xs text-slate-300 mt-1">4-Level syllabus with graded weekly tests.</p>
+              </div>
 
-          <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur p-3.5 rounded-2xl border border-[#D8DFEA]/80 shadow-sm">
-            <Cloud className="w-4 h-4 text-[#2F6FE0]" />
-            <span>Cloud Learning</span>
-          </div>
+              <ul className="space-y-2 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Fundamentals to Cloud Defense</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>10-Question weekly graded tests</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Interactive cryptographic lab</span>
+                </li>
+              </ul>
+            </div>
 
-          <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur p-3.5 rounded-2xl border border-[#D8DFEA]/80 shadow-sm">
-            <Cpu className="w-4 h-4 text-[#2E9B58]" />
-            <span>Smart Education</span>
-          </div>
-
-          <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur p-3.5 rounded-2xl border border-[#D8DFEA]/80 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-[#CC9A2E]" />
-            <span>Secure & Trusted</span>
-          </div>
-
-          <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur p-3.5 rounded-2xl border border-[#D8DFEA]/80 shadow-sm col-span-2 sm:col-span-1">
-            <LineChart className="w-4 h-4 text-[#132C54]" />
-            <span>Academic Success</span>
-          </div>
+            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-cyan-300 border border-cyan-400/40 group-hover:bg-cyan-500 group-hover:text-slate-950 px-4 py-2.5 rounded-xl transition-all">
+              Explore Cybersecurity <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </span>
+          </button>
         </div>
       </section>
     </div>

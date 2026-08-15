@@ -1,43 +1,77 @@
 import React, { useState } from 'react';
 import { UserRole, StudentDetail } from '../types';
-import { X, GraduationCap, BookOpen, Users, Lock, LogIn, KeyRound, Check } from 'lucide-react';
-import { SAMPLE_STUDENTS, getStudentByPin } from '../data/mockData';
+import { X, GraduationCap, BookOpen, Users, Lock, LogIn, KeyRound, Check, UserPlus, AlertCircle } from 'lucide-react';
+import { authenticateByPin, authenticateByEmail, userToStudentDetail } from '../services/authStorage';
 
 interface SignInModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSignInSuccess: (role: UserRole, userName: string, student?: StudentDetail) => void;
+  onNavigateToRegister?: () => void;
 }
 
-export const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose, onSignInSuccess }) => {
+export const SignInModal: React.FC<SignInModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSignInSuccess,
+  onNavigateToRegister
+}) => {
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
-  const [pin, setPin] = useState('8842');
-  const [email, setEmail] = useState('alex.chen@ilearnit365.edu');
+  const [pin, setPin] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authType, setAuthType] = useState<'pin' | 'email'>('pin');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const matchedStudent = getStudentByPin(pin);
+  const matchedUser = pin.length >= 4 ? authenticateByPin(pin) : undefined;
 
   const handleRoleChange = (role: UserRole) => {
     setSelectedRole(role);
-    if (role === 'student') setEmail('alex.chen@ilearnit365.edu');
-    else if (role === 'teacher') setEmail('sarah.jenkins@ilearnit365.edu');
-    else if (role === 'parent') setEmail('david.chen@ilearnit365.edu');
+    setErrorMessage(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    let name = matchedStudent ? matchedStudent.name : 'Alex Chen';
-    if (selectedRole === 'teacher') name = 'Dr. Sarah Jenkins';
-    else if (selectedRole === 'parent') name = matchedStudent?.parentName || 'David Chen';
-    
-    onSignInSuccess(selectedRole, name, matchedStudent || SAMPLE_STUDENTS[0]);
-    onClose();
+    setErrorMessage(null);
+
+    if (authType === 'pin') {
+      if (!pin.trim()) {
+        setErrorMessage('Please enter your 4-digit Student PIN.');
+        return;
+      }
+
+      const user = authenticateByPin(pin);
+      if (!user) {
+        setErrorMessage(`Invalid Student PIN "${pin}". Please verify your PIN or register a new profile.`);
+        return;
+      }
+
+      const studentDetail = userToStudentDetail(user);
+      onSignInSuccess(user.role, user.name, studentDetail);
+      onClose();
+    } else {
+      if (!email.trim()) {
+        setErrorMessage('Please enter your registered email.');
+        return;
+      }
+
+      const user = authenticateByEmail(email, selectedRole);
+      if (!user) {
+        setErrorMessage(`No account found for "${email}" with role ${selectedRole}.`);
+        return;
+      }
+
+      const studentDetail = userToStudentDetail(user);
+      onSignInSuccess(user.role, user.name, studentDetail);
+      onClose();
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white border border-[#D8DFEA] rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative space-y-6">
+      <div className="bg-white border border-[#D8DFEA] rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative space-y-5">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -52,7 +86,7 @@ export const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose, onSig
             <Lock className="w-5 h-5 text-[#CC9A2E]" />
           </div>
           <h3 className="font-sora font-bold text-2xl text-[#0B1D3A]">Sign In to iLearnit-365</h3>
-          <p className="text-xs text-[#5B6A88]">Select your ecosystem portal to log in.</p>
+          <p className="text-xs text-[#5B6A88]">Enter your registered Student PIN or credentials.</p>
         </div>
 
         {/* Role Selector Buttons */}
@@ -94,62 +128,85 @@ export const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose, onSig
           </button>
         </div>
 
+        {/* Method Toggle */}
+        <div className="flex bg-slate-100 p-1 rounded-xl text-xs border border-slate-200">
+          <button
+            type="button"
+            onClick={() => setAuthType('pin')}
+            className={`flex-1 py-1 text-center rounded-lg font-bold transition cursor-pointer ${
+              authType === 'pin' ? 'bg-white text-navy shadow-sm' : 'text-slate-500'
+            }`}
+          >
+            4-Digit PIN
+          </button>
+          <button
+            type="button"
+            onClick={() => setAuthType('email')}
+            className={`flex-1 py-1 text-center rounded-lg font-bold transition cursor-pointer ${
+              authType === 'email' ? 'bg-white text-navy shadow-sm' : 'text-slate-500'
+            }`}
+          >
+            Email & Password
+          </button>
+        </div>
+
         {/* Form Inputs */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {selectedRole !== 'teacher' && (
+          {authType === 'pin' ? (
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-[#0B1D3A] flex items-center gap-1">
-                  <KeyRound className="w-3.5 h-3.5 text-blue-600" /> Student Access PIN
-                </label>
-                <span className="text-[10px] text-slate-500 font-mono">e.g. 8842</span>
-              </div>
+              <label className="text-xs font-semibold text-[#0B1D3A] flex items-center gap-1 mb-1">
+                <KeyRound className="w-3.5 h-3.5 text-blue-600" /> Student Access PIN
+              </label>
               <div className="relative">
                 <input
                   type="text"
                   required
+                  maxLength={8}
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
-                  placeholder="Enter Student PIN..."
+                  placeholder="Enter 4-digit PIN..."
                   className="w-full bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-[#0B1D3A] focus:outline-none focus:border-[#132C54]"
                 />
-                {matchedStudent && (
+                {matchedUser && (
                   <div className="absolute right-2 top-2 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                    <Check className="w-3 h-3 text-emerald-600" /> {matchedStudent.name}
+                    <Check className="w-3 h-3 text-emerald-600" /> {matchedUser.name}
                   </div>
                 )}
               </div>
-
-              {/* Sample PIN Pills */}
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {SAMPLE_STUDENTS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setPin(s.pin)}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
-                      pin === s.pin
-                        ? 'bg-blue-600 text-white border-blue-600 font-bold'
-                        : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                    }`}
-                  >
-                    {s.pin} ({s.name.split(' ')[0]})
-                  </button>
-                ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#0B1D3A] mb-1">Registered Email</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="user@ilearnit365.edu"
+                  className="w-full bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3.5 py-2.5 text-xs text-[#0B1D3A] focus:outline-none focus:border-[#132C54]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#0B1D3A] mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3.5 py-2.5 text-xs text-[#0B1D3A] focus:outline-none focus:border-[#132C54]"
+                />
               </div>
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold text-[#0B1D3A] mb-1">User Identifier Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3.5 py-2.5 text-xs text-[#0B1D3A] focus:outline-none focus:border-[#132C54]"
-            />
-          </div>
+          {errorMessage && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-xl text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           <button
             type="submit"
@@ -158,6 +215,23 @@ export const SignInModal: React.FC<SignInModalProps> = ({ isOpen, onClose, onSig
             <LogIn className="w-4 h-4 text-[#CC9A2E]" /> Launch {selectedRole.toUpperCase()} Portal
           </button>
         </form>
+
+        {/* Register Prompt in Modal */}
+        {onNavigateToRegister && (
+          <div className="border-t border-slate-100 pt-3 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onNavigateToRegister();
+              }}
+              className="text-xs text-blue-600 hover:underline font-bold flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Don't have a PIN? Register New Account</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

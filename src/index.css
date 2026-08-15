@@ -12,6 +12,25 @@
     --line: #D8DFEA;
     --blue-accent: #2F6FE0;
     --white: #ffffff;
+    --card-bg: #ffffff;
+    --header-bg: rgba(255, 255, 255, 0.95);
+    --muted-text: #4C5A75;
+  }
+
+  .dark, [data-theme="dark"] {
+    --navy: #3B82F6;
+    --navy-deep: #F8FAFC;
+    --green: #34D399;
+    --gold: #FBBF24;
+    --ink: #F1F5F9;
+    --paper: #0B1120;
+    --paper-2: #1E293B;
+    --line: #334155;
+    --blue-accent: #38BDF8;
+    --white: #1E293B;
+    --card-bg: #1E293B;
+    --header-bg: rgba(15, 23, 42, 0.95);
+    --muted-text: #94A3B8;
   }
 
   body {
@@ -19,6 +38,7 @@
     color: var(--ink);
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   h1, h2, h3, h4, .font-sora {
@@ -38,10 +58,18 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  transition: background-image 0.5s ease;
   background-image:
     radial-gradient(circle at 12% 8%, rgba(46, 155, 88, 0.08), transparent 40%),
     radial-gradient(circle at 88% 6%, rgba(204, 154, 46, 0.10), transparent 38%),
     radial-gradient(circle at 50% 100%, rgba(19, 44, 84, 0.06), transparent 45%);
+}
+
+.dark .bg-field, [data-theme="dark"] .bg-field {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(46, 155, 88, 0.12), transparent 40%),
+    radial-gradient(circle at 88% 6%, rgba(204, 154, 46, 0.12), transparent 38%),
+    radial-gradient(circle at 50% 100%, rgba(59, 130, 246, 0.10), transparent 45%);
 }
 
 /* Wire Draw & Node Animations */
@@ -81,4 +109,41 @@
 .wire-node {
   opacity: 0;
   animation: nodePopIn 0.4s ease forwards;
+}
+
+/* Marquee / Newsline Ticker Animation */
+@keyframes newslineMarquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-newsline {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: newslineMarquee 40s linear infinite;
+  will-change: transform;
+}
+
+.animate-newsline:hover,
+.newsline-paused .animate-newsline {
+  animation-play-state: paused !important;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

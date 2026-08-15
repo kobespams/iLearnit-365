@@ -89,7 +89,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
             <p className="text-xs text-[#5B6A88] mt-1 flex flex-wrap items-center gap-2">
               <Users className="w-4 h-4 text-[#CC9A2E]" /> Linked Child: <span className="font-semibold text-[#0B1D3A]">{child.name}</span> ({child.gradeLevel})
               <span className="bg-blue-50 text-blue-800 text-[11px] font-mono font-bold px-2 py-0.5 rounded border border-blue-200">
-                PIN: {child.pin || '8842'}
+                PIN: {child.pin || 'Protected'}
               </span>
             </p>
           </div>

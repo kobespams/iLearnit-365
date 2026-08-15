@@ -1,4 +1,4 @@
-import { Course, Assignment, ClassGroup, StudentDetail, TeacherNote, QuizQuestion } from '../types';
+import { Course, Assignment, ClassGroup, StudentDetail, TeacherNote, QuizQuestion, Announcement } from '../types';
 
 export const INITIAL_STUDENT_COURSES: Course[] = [
   {
@@ -285,5 +285,92 @@ export const SAMPLE_QUIZ_QUESTIONS: QuizQuestion[] = [
     options: ['Gauss’s Law for Magnetism', 'Faraday’s Law', 'Ampère’s Law', 'Gauss’s Law for Electricity'],
     correctAnswer: 0,
     explanation: 'Gauss’s Law for Magnetism states ∇·B = 0, meaning magnetic field lines always form closed loops and isolated monopoles have never been observed.',
+  },
+];
+
+export const INITIAL_ANNOUNCEMENTS: Announcement[] = [
+  {
+    id: 'ann-1',
+    title: '🚨 BECE & Midterm Examination Timetable Published - CBT Ready',
+    message: 'The official Term 3 Assessment schedule is now active. Students in JSS1–JSS3 and Senior Secondary can start practicing with the Universal AI-Powered CBT Exam Suite. Review test timers and practice with 10-question standardized drills.',
+    author: 'Dr. Sarah Jenkins',
+    authorRole: 'Academic Dean & CS Department Chair',
+    authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200',
+    category: 'Examination',
+    priority: 'urgent',
+    targetAudience: 'All Students (JSS1 - SS3)',
+    timestamp: 'Today, 08:30 AM',
+    createdAt: Date.now() - 1000 * 60 * 45, // 45 mins ago
+    isPinned: true,
+    actionLink: {
+      label: 'Open CBT Exam Suite',
+      targetRole: 'cbt',
+    },
+    readBy: [],
+  },
+  {
+    id: 'ann-2',
+    title: '📐 JSS Mathematics Week 4 Problem Sets & Diagnostic Notes Released',
+    message: 'New step-by-step worked examples on Fractions, Percentages, and Algebraic Equations have been uploaded to the JSS Math Syllabus Hub. Complete practice drills before the Friday mock assessment.',
+    author: 'Prof. Michael Vance',
+    authorRole: 'Senior Mathematics Instructor',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+    category: 'Academic',
+    priority: 'high',
+    targetAudience: 'JSS1, JSS2, JSS3 Students',
+    timestamp: 'Yesterday, 04:15 PM',
+    createdAt: Date.now() - 1000 * 60 * 60 * 18,
+    isPinned: true,
+    actionLink: {
+      label: 'Explore JSS Math Syllabus',
+      targetRole: 'jss_math',
+    },
+    readBy: [],
+  },
+  {
+    id: 'ann-3',
+    title: '🛡️ National Secondary Cyber Defense Challenge 2026: Team Registration',
+    message: 'Interested students in Grades 9–12 are invited to register for the upcoming Cyber Threat Intelligence & Network Defense scrimmage. Complete the Level 1 & Level 2 modules in the Cybersecurity Academy to qualify.',
+    author: 'Engr. Daniel Osei',
+    authorRole: 'Cybersecurity Defense Lead',
+    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200',
+    category: 'STEM & Coding',
+    priority: 'medium',
+    targetAudience: 'Secondary Students',
+    timestamp: 'Aug 14, 2026',
+    createdAt: Date.now() - 1000 * 60 * 60 * 36,
+    actionLink: {
+      label: 'Open Cyber Academy',
+      targetRole: 'cyber_security',
+    },
+    readBy: ['st-101'],
+  },
+  {
+    id: 'ann-4',
+    title: '🎵 CCA Music: Solfa Notation & African Organology Recital Submission',
+    message: 'Cultural & Creative Arts students must submit their musical scales analysis and traditional idiophone/membranophone classification reports by 11:59 PM this Friday.',
+    author: 'Mrs. Clara Thorne',
+    authorRole: 'Creative Arts & Music Coordinator',
+    authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
+    category: 'Music & Arts',
+    priority: 'medium',
+    targetAudience: 'JSS1 - JSS3 CCA Students',
+    timestamp: 'Aug 13, 2026',
+    createdAt: Date.now() - 1000 * 60 * 60 * 60,
+    readBy: ['st-101'],
+  },
+  {
+    id: 'ann-5',
+    title: '🏫 Annual STEM & AI Innovation Exhibition — Call for Projects',
+    message: 'Submissions for the 2026 Science and Technology Expo are now accepted! Present your AI study bots, robotics prototypes, and mathematical modeling projects at the Main Auditorium.',
+    author: 'Principal Academic Office',
+    authorRole: 'School Administration',
+    authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200',
+    category: 'Campus',
+    priority: 'low',
+    targetAudience: 'All Staff, Students & Parents',
+    timestamp: 'Aug 11, 2026',
+    createdAt: Date.now() - 1000 * 60 * 60 * 96,
+    readBy: ['st-101'],
   },
 ];

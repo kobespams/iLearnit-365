@@ -1,0 +1,108 @@
+================================================================================
+JSS 1 CULTURAL AND CREATIVE ARTS (CCA) - MUSIC LESSONS & REVISED NOTES
+================================================================================
+
+MODULE 1: INTRODUCTION TO MUSIC AND SOUND
+--------------------------------------------------------------------------------
+1.1 Definition of Music:
+- Music is organized sound that is pleasant, meaningful, and agreeable to the ear.
+- Contrast with Noise: Noise is disorganized, irregular, and unpleasant sound.
+
+1.2 Properties of Musical Sound:
+- Pitch: The highness or lowness of a sound, determined by vibration frequency (Hz).
+- Dynamics / Intensity: The loudness or softness of a sound, determined by amplitude.
+- Timbre (Tone Colour): The unique quality or characteristic that distinguishes one instrument or voice from another (e.g., flute vs. trumpet).
+- Duration: The length of time a sound or silence is sustained.
+
+1.3 Sources of Sound:
+- Natural sources: Human vocal cords, birds singing, running water, wind.
+- Artificial sources: Struck drums, plucked strings, blown horns, electronic synthesizers.
+
+--------------------------------------------------------------------------------
+MODULE 2: THE MUSICAL STAFF / STAVE AND CLEFS
+--------------------------------------------------------------------------------
+2.1 The Stave:
+- The stave consists of 5 parallel horizontal lines and 4 equal intervening spaces, counted from bottom to top.
+- Ledger lines: Short auxiliary lines used to extend the pitch range above or below the stave.
+
+2.2 Clefs:
+- Treble Clef (G-Clef):
+  * Locates the note G4 on the second line of the stave.
+  * Lines (from bottom to top 1 to 5): E - G - B - D - F (Mnemonic: Every Good Boy Deserves Favour).
+  * Spaces (from bottom to top 1 to 4): F - A - C - E (Spells "FACE").
+- Bass Clef (F-Clef):
+  * Locates the note F3 on the fourth line of the stave (flanked by two dots).
+  * Lines (from bottom to top 1 to 5): G - B - D - F - A (Mnemonic: Good Boys Do Fine Always).
+  * Spaces (from bottom to top 1 to 4): A - C - E - G (Mnemonic: All Cows Eat Grass).
+
+--------------------------------------------------------------------------------
+MODULE 3: MUSICAL NOTES, NOTE VALUES, AND RESTS
+--------------------------------------------------------------------------------
+3.1 Note Hierarchy and Relative Values:
+- Semibreve (Whole Note): 4 beats / counts. Symbol: open oval head.
+- Minim (Half Note): 2 beats / counts. Symbol: open oval head with vertical stem. (1 Semibreve = 2 Minims)
+- Crotchet (Quarter Note): 1 beat / count. Symbol: filled oval head with vertical stem. (1 Minim = 2 Crotchets)
+- Quaver (Eighth Note): 1/2 beat / count. Symbol: filled oval head with stem and 1 hook/tail. (1 Crotchet = 2 Quavers)
+- Semiquaver (Sixteenth Note): 1/4 beat / count. Symbol: filled oval head with stem and 2 hooks/tails. (1 Quaver = 2 Semiquavers)
+
+3.2 Corresponding Musical Rests:
+- Every note has an equivalent rest representing a period of silence of identical duration.
+- Semibreve Rest: Sits hanging below the 4th line of the stave.
+- Minim Rest: Sits resting on top of the 3rd line of the stave.
+- Crotchet Rest: Lightning-bolt-like symbol (or inverted 7).
+- Quaver Rest: One-flag rest symbol.
+- Semiquaver Rest: Two-flag rest symbol.
+
+--------------------------------------------------------------------------------
+MODULE 4: TIME SIGNATURES AND BARS
+--------------------------------------------------------------------------------
+4.1 Time Signatures:
+- Two numbers placed at the beginning of a musical piece after the clef.
+- Top Number: Indicates the number of beats per bar / measure.
+- Bottom Number: Indicates the unit value of each beat (4 = crotchet / quarter note, 2 = minim, 8 = quaver).
+- 2/4 Time: Simple Duple (2 crotchet beats per bar; Strong - Weak).
+- 3/4 Time: Simple Triple (3 crotchet beats per bar; Strong - Weak - Weak, e.g., Waltz).
+- 4/4 Time (or Common Time 'C'): Simple Quadruple (4 crotchet beats per bar; Strong - Weak - Medium - Weak).
+
+--------------------------------------------------------------------------------
+MODULE 5: TONIC SOLFA AND HUMAN SINGING VOICES
+--------------------------------------------------------------------------------
+5.1 Tonic Solfa Syllables:
+- The standard seven diatonic scale pitches: doh, ray, me, fah, soh, lah, te, doh' (d, r, m, f, s, l, t, d').
+- Solfa helps singers pitch accurately without needing instrumental accompaniment.
+
+5.2 Classification of Human Singing Voices:
+- Female Voices:
+  * Soprano: The highest female singing voice.
+  * Alto (Contralto): The lowest female singing voice.
+- Male Voices:
+  * Tenor: The highest standard male singing voice.
+  * Bass: The lowest male singing voice.
+  * (Baritone: Intermediate male voice between Tenor and Bass).
+
+--------------------------------------------------------------------------------
+MODULE 6: AFRICAN AND NIGERIAN TRADITIONAL MUSICAL INSTRUMENTS (ORGANOLOGY)
+--------------------------------------------------------------------------------
+Classification by Sound Generation Mechanism:
+1. Idiophones (Self-sounding solid bodies, struck, scraped, or shaken):
+   - Agogo (Yoruba metal gong / bell)
+   - Sekere / Aje (Beaded gourd rattle)
+   - Ekwe / Ikoro (Igbo slit wooden log drum)
+   - Kundun / Xylophone (Wooden slabs over calabash resonators)
+   - Udu (Igbo clay water vessel / pot drum)
+
+2. Membranophones (Sound produced by vibrating stretched animal skin/membrane):
+   - Bata drum (Conical double-headed drum associated with Sango)
+   - Gangan / Dundun (Hourglass pressure talking drum)
+   - Igba (Igbo cylinder tom-tom drum)
+
+3. Aerophones (Wind instruments; sound produced by vibrating air columns):
+   - Oja (Igbo notched wooden whistle / flute)
+   - Kakaki (Hausa long ceremonial brass royal trumpet, up to 3-4 meters)
+   - Algaita (Hausa double-reed shawm / oboe-like wind horn)
+
+4. Chordophones (Stringed instruments; sound produced by vibrating strings):
+   - Goge (Hausa one-string bowed fiddle with horsehair and calabash resonator)
+   - Une (Igbo musical mouth bow)
+   - Garaya (Hausa two-string plucked lute)
+================================================================================

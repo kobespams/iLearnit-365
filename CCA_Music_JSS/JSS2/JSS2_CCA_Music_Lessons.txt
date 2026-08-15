@@ -1,0 +1,109 @@
+================================================================================
+JSS 2 CULTURAL AND CREATIVE ARTS (CCA) - MUSIC LESSONS & REVISED NOTES
+================================================================================
+
+MODULE 1: SCALES AND KEY SIGNATURES
+--------------------------------------------------------------------------------
+1.1 Definition of a Scale:
+- An orderly stepwise progression or alphabetical succession of musical pitches, ascending or descending within an octave.
+
+1.2 Major Scale Formula:
+- The standard interval pattern of a Major Scale: Tone - Tone - Semitone - Tone - Tone - Tone - Semitone (T - T - S - T - T - T - S).
+- Semitones naturally fall between the 3rd & 4th degrees and the 7th & 8th degrees.
+
+1.3 Key Signatures of Common Major Scales:
+- C Major: Has 0 sharps and 0 flats (Notes: C - D - E - F - G - A - B - C).
+- G Major: Has 1 sharp on F (F#) (Notes: G - A - B - C - D - E - F# - G).
+- D Major: Has 2 sharps on F and C (F#, C#) (Notes: D - E - F# - G - A - B - C# - D).
+- F Major: Has 1 flat on B (Bb) (Notes: F - G - A - Bb - C - D - E - F).
+
+--------------------------------------------------------------------------------
+MODULE 2: MUSICAL INTERVALS AND TRIADS
+--------------------------------------------------------------------------------
+2.1 Musical Intervals:
+- An interval is the difference in pitch (distance) between two musical notes.
+- Types:
+  * Melodic Interval: The two notes are played or sung successively (one after another).
+  * Harmonic Interval: The two notes are sounded simultaneously (at the exact same time).
+- Numerical Distance: 2nd, 3rd, 4th, 5th, 6th, 7th, Octave (8th).
+- Quality: Perfect (Unison, 4th, 5th, Octave), Major, Minor, Augmented, Diminished.
+
+2.2 The Tonic Triad (Chord I):
+- A chord consisting of 3 notes stacked in thirds: Root (1st / Doh), Third (3rd / Me), and Fifth (5th / Soh).
+- Example in C Major: C - E - G.
+
+--------------------------------------------------------------------------------
+MODULE 3: WESTERN MUSICAL INSTRUMENTS & THE ORCHESTRA
+--------------------------------------------------------------------------------
+The four main instrumental families of the Symphony Orchestra:
+1. Strings (Bowed or plucked strings):
+   - Violin (highest pitch), Viola, Violoncello (Cello), Double Bass (lowest pitch), and Harp.
+2. Woodwinds (Blown pipes, formerly made of wood; sound created with reeds or blowholes):
+   - Flute & Piccolo (no reed, edge-blown)
+   - Clarinet & Saxophone (single vibrating reed)
+   - Oboe & English Horn (double vibrating reed)
+   - Bassoon & Contrabassoon (double reed, deep bass register)
+3. Brass (Cup-mouthpiece metal horns; sound made by buzzing lips):
+   - Trumpet (highest pitch, bright tone)
+   - French Horn (mellow, coiled horn)
+   - Trombone (uses a sliding mechanism to alter tube length)
+   - Tuba (lowest and heaviest brass instrument)
+4. Percussion (Struck, shaken, or scraped):
+   - Tuned / Definite Pitch: Timpani (Kettle drums), Xylophone, Glockenspiel, Tubular Bells.
+   - Untuned / Indefinite Pitch: Snare Drum, Bass Drum, Cymbals, Triangle, Tambourine.
+
+--------------------------------------------------------------------------------
+MODULE 4: ERAS IN WESTERN MUSIC HISTORY
+--------------------------------------------------------------------------------
+1. Baroque Era (c. 1600 – 1750):
+   - Characteristics: Polyphonic texture, continuous bass (Basso Continuo), ornate melodies, terraced dynamics.
+   - Prominent Composers: Johann Sebastian Bach, George Frideric Handel, Antonio Vivaldi.
+2. Classical Era (c. 1750 – 1820):
+   - Characteristics: Homophonic texture (melody + chordal accompaniment), clarity, balance, symmetry, development of the Sonata-Allegro form and symphony orchestra.
+   - Prominent Composers: Wolfgang Amadeus Mozart, Franz Joseph Haydn, Ludwig van Beethoven (early/middle).
+3. Romantic Era (c. 1820 – 1900):
+   - Characteristics: Intense emotional expression, nationalism, expanded orchestra, dramatic programmatic music.
+   - Prominent Composers: Frédéric Chopin, Pyotr Ilyich Tchaikovsky, Johannes Brahms, Franz Liszt.
+
+--------------------------------------------------------------------------------
+MODULE 5: CONTEMPORARY AND POPULAR NIGERIAN MUSIC GENRES
+--------------------------------------------------------------------------------
+1. Highlife:
+   - Originated in West Africa in early 20th century. Characterized by jazzy horn riffs, syncopated guitar rhythms, and indigenous percussion.
+   - Pioneers: E.T. Mensah, Cardinal Rex Lawson, Victor Olaiya, Chief Osita Osadebe, Oliver de Coque.
+2. Juju Music:
+   - Yoruba fusion of traditional percussion (talking drums) with Western guitars, accordion, and praise singing.
+   - Pioneers: Tunde Nightingale, King Sunny Ade (synths & pedal steel guitar), Chief Commander Ebenezer Obey.
+3. Afrobeat:
+   - Powerful fusion of jazz, funk, psychedelic rock, traditional Yoruba highlife, and political activism.
+   - Pioneer: Fela Anikulapo Kuti and his band Africa 70 / Egypt 80 (featuring drummer Tony Allen).
+4. Fuji Music:
+   - Evolved from the Islamic morning wake-up song tradition (Were/Ajisari). Features dense talking drums, Sakara, and vocal storytelling without Western guitars.
+   - Pioneers: Alhaji Sikiru Ayinde Barrister, Ayinla Kollington, King Wasiu Ayinde Marshal (KWAM 1).
+5. Apala Music:
+   - Acoustic Yoruba folk genre using Sekere, Agidigbo (thumb piano), and Akuba drums.
+   - Pioneer: Haruna Ishola.
+
+--------------------------------------------------------------------------------
+MODULE 6: MUSICAL TERMS AND DYNAMICS
+--------------------------------------------------------------------------------
+6.1 Dynamics (Volume Markings):
+- Pianissimo (pp): Very soft
+- Piano (p): Soft
+- Mezzo-piano (mp): Moderately soft
+- Mezzo-forte (mf): Moderately loud
+- Forte (f): Loud
+- Fortissimo (ff): Very loud
+- Crescendo (<): Gradually getting louder
+- Decrescendo / Diminuendo (>): Gradually getting softer
+
+6.2 Tempo (Speed Markings):
+- Largo: Very slow and broad
+- Adagio: Slow and stately
+- Andante: At a walking pace
+- Moderato: Moderate speed
+- Allegro: Fast, lively, and bright
+- Presto: Very fast
+- Accelerando (accel.): Gradually speeding up
+- Rallentando / Ritardando (rall. / rit.): Gradually slowing down
+================================================================================

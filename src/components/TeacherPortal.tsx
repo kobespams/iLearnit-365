@@ -1,16 +1,31 @@
 import React, { useState } from 'react';
-import { ClassGroup, StudentDetail } from '../types';
+import { ClassGroup, StudentDetail, Announcement, UserRole } from '../types';
 import { generateContent } from '../services/api';
-import { BookOpen, Users, CheckSquare, Sparkles, Plus, Send, FileText, CheckCircle2, ChevronRight, RefreshCw, PenTool, Calculator } from 'lucide-react';
+import { BookOpen, Users, CheckSquare, Sparkles, Plus, Send, FileText, CheckCircle2, ChevronRight, RefreshCw, PenTool, Calculator, BarChart3, TrendingUp, ArrowRight, Megaphone } from 'lucide-react';
 import { JSSMathExplorer } from './JSSMathExplorer';
+import { ClassQuizAnalytics } from './ClassQuizAnalytics';
+import { StudentAnnouncementsBoard } from './StudentAnnouncementsBoard';
 
 interface TeacherPortalProps {
   classes: ClassGroup[];
   students: StudentDetail[];
+  announcements?: Announcement[];
+  onAddAnnouncement?: (newAnn: Omit<Announcement, 'id' | 'createdAt' | 'readBy'>) => void;
+  onMarkAnnouncementRead?: (id: string) => void;
+  onMarkAllAnnouncementsRead?: () => void;
+  onNavigateRole?: (role: UserRole) => void;
 }
 
-export const TeacherPortal: React.FC<TeacherPortalProps> = ({ classes, students }) => {
-  const [activeTab, setActiveTab] = useState<'classes' | 'jss-math' | 'grading' | 'ai-lesson-gen'>('classes');
+export const TeacherPortal: React.FC<TeacherPortalProps> = ({ 
+  classes, 
+  students,
+  announcements = [],
+  onAddAnnouncement = () => {},
+  onMarkAnnouncementRead = () => {},
+  onMarkAllAnnouncementsRead = () => {},
+  onNavigateRole,
+}) => {
+  const [activeTab, setActiveTab] = useState<'classes' | 'analytics' | 'jss-math' | 'broadcasts' | 'grading' | 'ai-lesson-gen'>('classes');
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(classes[0]);
 
   // Grading Queue state
@@ -105,6 +120,16 @@ Include:
             My Classes
           </button>
           <button
+            onClick={() => setActiveTab('analytics')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'analytics'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm ring-1 ring-emerald-400'
+                : 'text-emerald-800 bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-200'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-emerald-600" /> Class Analytics & Trends
+          </button>
+          <button
             onClick={() => setActiveTab('jss-math')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'jss-math'
@@ -113,6 +138,16 @@ Include:
             }`}
           >
             <Calculator className="w-3.5 h-3.5" /> JSS Math Syllabus
+          </button>
+          <button
+            onClick={() => setActiveTab('broadcasts')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'broadcasts'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-amber-800 bg-amber-50/80 hover:bg-amber-100 border border-amber-200'
+            }`}
+          >
+            <Megaphone className="w-3.5 h-3.5 text-amber-600" /> Announcements ({announcements.length})
           </button>
           <button
             onClick={() => setActiveTab('grading')}
@@ -244,8 +279,41 @@ Include:
                 </tbody>
               </table>
             </div>
+
+            {/* Quick Link to Analytics */}
+            <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shrink-0">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-sora font-bold text-xs text-[#0B1D3A]">
+                    {selectedClass.name} Assessment Analytics
+                  </h4>
+                  <p className="text-[11px] text-[#5B6A88]">
+                    Explore 6-quiz performance trajectory, score histograms, and skill competency radar.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className="inline-flex items-center justify-center gap-1.5 bg-[#0B1D3A] hover:bg-[#132C54] text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
+              >
+                Open Analytics Summary <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* TAB CONTENT: CLASS PERFORMANCE & QUIZ ANALYTICS */}
+      {activeTab === 'analytics' && (
+        <ClassQuizAnalytics
+          classes={classes}
+          students={students}
+          selectedClassId={selectedClass.id}
+          onSelectClass={setSelectedClass}
+        />
       )}
 
       {/* TAB CONTENT: JSS MATH */}
@@ -254,6 +322,20 @@ Include:
           onAssignToClass={(lesson) => {
             alert(`Assigned "${lesson.title}" (${lesson.level}) to ${selectedClass.name}!`);
           }}
+        />
+      )}
+
+      {/* TAB CONTENT: ANNOUNCEMENTS & CAMPUS BROADCASTS */}
+      {activeTab === 'broadcasts' && (
+        <StudentAnnouncementsBoard
+          announcements={announcements}
+          currentUserId="teacher-1"
+          onMarkRead={onMarkAnnouncementRead}
+          onMarkAllRead={onMarkAllAnnouncementsRead}
+          onAddAnnouncement={onAddAnnouncement}
+          onNavigateRole={onNavigateRole}
+          activeRole="teacher"
+          userName="Dr. Sarah Jenkins"
         />
       )}
 
