@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
-import { User, LogIn, Sparkles, BookOpen, GraduationCap, Users, LayoutGrid, CheckCircle, KeyRound, ShieldCheck, Sun, Moon, Bell } from 'lucide-react';
+import { User, LogIn, Sparkles, BookOpen, GraduationCap, Users, LayoutGrid, CheckCircle, KeyRound, ShieldCheck, Shield, Sun, Moon, Bell, Lock } from 'lucide-react';
 import { applyTheme, getInitialTheme, ThemeMode } from '../utils/theme';
 
 interface HeaderProps {
@@ -156,6 +156,34 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button
+            onClick={() => onSelectRole('cheal_hub')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer ${
+              currentRole === 'cheal_hub'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-700 text-white shadow-sm ring-1 ring-cyan-300'
+                : 'text-cyan-900 dark:text-cyan-200 bg-cyan-50/90 dark:bg-cyan-950/50 hover:bg-cyan-100 dark:hover:bg-cyan-900/50 border border-cyan-300 dark:border-cyan-700/60'
+            }`}
+            title="CHEAL Platform Infrastructure, Security, Diagnostics & Application Registry"
+          >
+            <Shield className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+            <span>CHEAL Hub</span>
+            <span className="text-[9px] bg-cyan-600/20 dark:bg-cyan-400/20 text-cyan-700 dark:text-cyan-300 px-1.5 py-0.2 rounded font-mono font-bold">Platform</span>
+          </button>
+
+          <button
+            onClick={() => onSelectRole('ilearnit_security')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer ${
+              currentRole === 'ilearnit_security'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-sm ring-1 ring-blue-300'
+                : 'text-blue-900 dark:text-blue-200 bg-blue-50/90 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-300 dark:border-blue-700/60'
+            }`}
+            title="iLearnit-365 Security, Multi-Tenant Isolation & 9-Purpose OTP Studio"
+          >
+            <Lock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <span>iLearnit Security</span>
+            <span className="text-[9px] bg-blue-600/20 dark:bg-blue-400/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.2 rounded font-mono font-bold">Domain</span>
+          </button>
+
+          <button
             onClick={() => onSelectRole(currentRole === 'register' ? 'register' : 'login')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               currentRole === 'login' || currentRole === 'register'
@@ -284,6 +312,24 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full text-left px-4 py-2 text-xs text-purple-900 dark:text-purple-300 font-bold hover:bg-purple-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-purple-600" /> Registrar Admin Console
+                  </button>
+                  <button
+                    onClick={() => {
+                      onSelectRole('cheal_hub');
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-cyan-900 dark:text-cyan-300 font-bold hover:bg-cyan-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-cyan-600" /> CHEAL Secure Hub (Platform & Diagnostics)
+                  </button>
+                  <button
+                    onClick={() => {
+                      onSelectRole('ilearnit_security');
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs text-blue-900 dark:text-blue-300 font-bold hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-blue-600" /> iLearnit-365 Security & OTP Center
                   </button>
                   <div className="border-t border-[#ECF0F6] dark:border-slate-800 my-1"></div>
                   <button

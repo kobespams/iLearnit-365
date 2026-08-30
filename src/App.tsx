@@ -9,6 +9,8 @@ import { JSSMathExplorer } from './components/JSSMathExplorer';
 import { CyberSecurityExplorer } from './components/CyberSecurityExplorer';
 import { CBTExamInterface } from './components/CBTExamInterface';
 import AdminDashboard from './components/AdminDashboard';
+import { ChealSecureHub } from './components/ChealSecureHub';
+import { ILearnitSecurityCenter } from './components/ILearnitSecurityCenter';
 import { LoginPage } from './components/LoginPage';
 import { RegistrationPage } from './components/RegistrationPage';
 import { SignInModal } from './components/SignInModal';
@@ -155,6 +157,20 @@ export default function App() {
 
         {currentRole === 'admin' && (
           <AdminDashboard onNavigateRole={setCurrentRole} />
+        )}
+
+        {currentRole === 'cheal_hub' && (
+          <ChealSecureHub
+            onNavigateRole={setCurrentRole}
+            onClose={() => setCurrentRole('hub')}
+          />
+        )}
+
+        {currentRole === 'ilearnit_security' && (
+          <ILearnitSecurityCenter
+            onNavigateRole={setCurrentRole}
+            onClose={() => setCurrentRole('hub')}
+          />
         )}
 
         {currentRole === 'hub' && <RoleHub onSelectRole={setCurrentRole} />}

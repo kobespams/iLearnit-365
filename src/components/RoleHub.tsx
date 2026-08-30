@@ -474,6 +474,90 @@ export const RoleHub: React.FC<RoleHubProps> = ({ onSelectRole }) => {
               Open Registrar Console <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </span>
           </button>
+
+          {/* CHEAL Secure Hub Platform Card */}
+          <button
+            onClick={() => onSelectRole('cheal_hub')}
+            className="group relative bg-gradient-to-b from-[#0B1528] via-[#070D18] to-slate-950 border border-cyan-500/40 hover:border-cyan-400 rounded-3xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/20 flex flex-col justify-between cursor-pointer space-y-6 text-white"
+          >
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Cpu className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-400/30">
+                    Platform Security Layer
+                  </span>
+                </div>
+                <h3 className="font-sora font-bold text-lg text-white group-hover:text-cyan-300 transition-colors mt-1.5 flex items-center gap-2">
+                  🛡️ CHEAL Secure Hub
+                </h3>
+                <p className="text-xs text-slate-300 mt-1">Platform infrastructure, Perfetto diagnostics & multi-tenant registry.</p>
+              </div>
+
+              <ul className="space-y-2 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Auth0 Identity & 3-Tier data boundary</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Perfetto Performance Lab & Incident Engine</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>CHEAL Event Bus & App Registry</span>
+                </li>
+              </ul>
+            </div>
+
+            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-cyan-300 border border-cyan-400/40 group-hover:bg-cyan-500 group-hover:text-slate-950 px-4 py-2.5 rounded-xl transition-all">
+              Launch CHEAL Secure Hub <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </span>
+          </button>
+
+          {/* iLearnit-365 Security & Authentication Center Card */}
+          <button
+            onClick={() => onSelectRole('ilearnit_security')}
+            className="group relative bg-gradient-to-b from-[#0B1A30] via-[#071120] to-slate-950 border border-blue-500/40 hover:border-cyan-400 rounded-3xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-500/20 flex flex-col justify-between cursor-pointer space-y-6 text-white"
+          >
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-400/30">
+                    Domain Security &amp; OTP
+                  </span>
+                </div>
+                <h3 className="font-sora font-bold text-lg text-white group-hover:text-cyan-300 transition-colors mt-1.5 flex items-center gap-2">
+                  🔐 iLearnit Security Center
+                </h3>
+                <p className="text-xs text-slate-300 mt-1">9-purpose OTP studio, multi-tenant isolation & authoritative CBT engine.</p>
+              </div>
+
+              <ul className="space-y-2 text-xs text-slate-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span>9 Explicit OTP purposes (SMS &amp; Email)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span>Multi-Tenant school boundary verification</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span>Server-Authoritative CBT Exam grading</span>
+                </li>
+              </ul>
+            </div>
+
+            <span className="inline-flex items-center justify-center gap-2 text-xs font-bold text-blue-300 border border-blue-400/40 group-hover:bg-blue-600 group-hover:text-white px-4 py-2.5 rounded-xl transition-all">
+              Launch iLearnit Security <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </span>
+          </button>
         </div>
       </section>
     </div>

@@ -321,6 +321,51 @@ export default function AdminDashboard({ onNavigateRole }: AdminDashboardProps =
           <FileText size={16} /> Registrations
         </div>
 
+        {onNavigateRole && (
+          <>
+            <button
+              onClick={() => onNavigateRole('ilearnit_security')}
+              style={{
+                ...styles.navItem,
+                marginTop: 6,
+                background: "rgba(99, 102, 241, 0.15)",
+                border: "1px solid rgba(99, 102, 241, 0.3)",
+                color: "#A5B4FC",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                borderRadius: 8,
+                padding: "8px 12px",
+                fontWeight: 700,
+              }}
+            >
+              <ShieldCheck size={16} color="#A5B4FC" /> iLearnit Security &amp; OTP
+            </button>
+            <button
+              onClick={() => onNavigateRole('cheal_hub')}
+              style={{
+                ...styles.navItem,
+                marginTop: 6,
+                background: "rgba(6, 182, 212, 0.15)",
+                border: "1px solid rgba(6, 182, 212, 0.3)",
+                color: "#38BDF8",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                borderRadius: 8,
+                padding: "8px 12px",
+                fontWeight: 700,
+              }}
+            >
+              <ShieldCheck size={16} color="#38BDF8" /> CHEAL Secure Hub
+            </button>
+          </>
+        )}
+
         <div style={styles.statsBlock}>
           <div style={styles.statRow}>
             <span style={styles.statLabel}>Total students</span>
@@ -351,6 +396,19 @@ export default function AdminDashboard({ onNavigateRole }: AdminDashboardProps =
             <p style={styles.sub}>Generate feedback and verification letters after registration.</p>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            {onNavigateRole && (
+              <button
+                style={{
+                  ...styles.secondaryBtn,
+                  background: "rgba(6, 182, 212, 0.15)",
+                  border: "1px solid rgba(6, 182, 212, 0.4)",
+                  color: "#38BDF8",
+                }}
+                onClick={() => onNavigateRole('cheal_hub')}
+              >
+                <ShieldCheck size={15} color="#38BDF8" /> CHEAL Platform
+              </button>
+            )}
             {onNavigateRole && (
               <button
                 style={styles.secondaryBtn}

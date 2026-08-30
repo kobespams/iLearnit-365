@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { ClassGroup, StudentDetail, Announcement, UserRole } from '../types';
 import { generateContent } from '../services/api';
-import { BookOpen, Users, CheckSquare, Sparkles, Plus, Send, FileText, CheckCircle2, ChevronRight, RefreshCw, PenTool, Calculator, BarChart3, TrendingUp, ArrowRight, Megaphone } from 'lucide-react';
+import { 
+  BookOpen, Users, CheckSquare, Sparkles, Plus, Send, FileText, CheckCircle2, 
+  ChevronRight, RefreshCw, PenTool, Calculator, BarChart3, TrendingUp, 
+  ArrowRight, Megaphone, Download, Copy, Eye 
+} from 'lucide-react';
 import { JSSMathExplorer } from './JSSMathExplorer';
 import { ClassQuizAnalytics } from './ClassQuizAnalytics';
 import { StudentAnnouncementsBoard } from './StudentAnnouncementsBoard';
+import { COURSE_ICON_REGISTRY, getCourseIconInfo, convertToPlainTextDocument } from '../utils/courseIconRegistry';
+import { PlainTextDocumentModal } from './PlainTextDocumentModal';
 
 interface TeacherPortalProps {
   classes: ClassGroup[];
@@ -30,6 +36,15 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   const [activeTab, setActiveTab] = useState<'classes' | 'analytics' | 'jss-math' | 'broadcasts' | 'grading' | 'ai-lesson-gen'>('classes');
   const [selectedClass, setSelectedClass] = useState<ClassGroup>(classes[0]);
   const [assignedToast, setAssignedToast] = useState<string | null>(null);
+  
+  // Plain Text Modal state
+  const [plainTextDoc, setPlainTextDoc] = useState<{
+    title: string;
+    subtitle?: string;
+    content: string;
+    subjectId?: string;
+    docType?: string;
+  } | null>(null);
 
   const showAssignedToast = (msg: string) => {
     setAssignedToast(msg);
@@ -64,6 +79,7 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
 
   // AI Lesson Generator state
   const [lessonTopic, setLessonTopic] = useState('');
+  const [lessonSubject, setLessonSubject] = useState('Computer Science');
   const [gradeLevel, setGradeLevel] = useState('High School AP / Intro College');
   const [generatedOutput, setGeneratedOutput] = useState('');
   const [loadingAi, setLoadingAi] = useState(false);
@@ -185,37 +201,46 @@ Include:
         <div className="space-y-8">
           {/* Class Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {classes.map((cls) => (
-              <div
-                key={cls.id}
-                onClick={() => setSelectedClass(cls)}
-                className={`bg-white border rounded-3xl p-6 shadow-sm cursor-pointer transition-all ${
-                  selectedClass.id === cls.id
-                    ? 'border-[#2E9B58] ring-2 ring-[#2E9B58]/20'
-                    : 'border-[#D8DFEA] hover:border-[#2E9B58]/50'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-mono font-bold text-[#2E9B58]">{cls.code}</span>
-                  <span className="text-[10px] font-semibold bg-[#F6F8FB] border border-[#D8DFEA] px-2.5 py-1 rounded-full text-[#0B1D3A]">
-                    {cls.schedule}
-                  </span>
-                </div>
-
-                <h3 className="font-sora font-bold text-base text-[#0B1D3A] mb-3 leading-snug">{cls.name}</h3>
-
-                <div className="grid grid-cols-2 gap-2 text-xs border-t border-[#ECF0F6] pt-3">
-                  <div>
-                    <span className="text-[10px] text-[#7A8AA8] uppercase font-mono">Enrolled</span>
-                    <p className="font-bold text-[#0B1D3A]">{cls.studentsCount} Students</p>
+            {classes.map((cls) => {
+              const iconInfo = getCourseIconInfo(cls.name + ' ' + cls.code);
+              const IconComponent = iconInfo.icon;
+              return (
+                <div
+                  key={cls.id}
+                  onClick={() => setSelectedClass(cls)}
+                  className={`bg-white border rounded-3xl p-6 shadow-sm cursor-pointer transition-all ${
+                    selectedClass.id === cls.id
+                      ? 'border-[#2E9B58] ring-2 ring-[#2E9B58]/20 shadow-md'
+                      : 'border-[#D8DFEA] hover:border-[#2E9B58]/50 hover:shadow-xs'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-xl ${iconInfo.badgeBg} ${iconInfo.colorClass} border flex items-center justify-center`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-mono font-bold text-[#2E9B58]">{cls.code}</span>
+                    </div>
+                    <span className="text-[10px] font-semibold bg-[#F6F8FB] border border-[#D8DFEA] px-2.5 py-1 rounded-full text-[#0B1D3A]">
+                      {cls.schedule}
+                    </span>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-[#7A8AA8] uppercase font-mono">Class Average</span>
-                    <p className="font-bold text-[#2E9B58]">{cls.avgGrade}</p>
+
+                  <h3 className="font-sora font-bold text-base text-[#0B1D3A] mb-3 leading-snug">{cls.name}</h3>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs border-t border-[#ECF0F6] pt-3">
+                    <div>
+                      <span className="text-[10px] text-[#7A8AA8] uppercase font-mono">Enrolled</span>
+                      <p className="font-bold text-[#0B1D3A]">{cls.studentsCount} Students</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#7A8AA8] uppercase font-mono">Class Average</span>
+                      <p className="font-bold text-[#2E9B58]">{cls.avgGrade}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Roster & Selected Class Details */}
@@ -461,6 +486,26 @@ Include:
                 </select>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-[#0B1D3A] mb-1">Quick Subject Presets</label>
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {['Math', 'Computer Science', 'Cybersecurity', 'Music', 'Physics', 'Literature'].map((subj) => (
+                    <button
+                      key={subj}
+                      type="button"
+                      onClick={() => setLessonSubject(subj)}
+                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition cursor-pointer border ${
+                        lessonSubject === subj
+                          ? 'bg-[#132C54] text-white border-[#132C54]'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {subj}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 onClick={handleGenerateLessonPlan}
                 disabled={!lessonTopic.trim() || loadingAi}
@@ -482,9 +527,30 @@ Include:
           {/* Generated Lesson Output (7 cols) */}
           <div className="lg:col-span-7">
             <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm h-full flex flex-col">
-              <h4 className="font-sora font-bold text-base text-[#0B1D3A] border-b border-[#ECF0F6] pb-3 mb-4 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#2E9B58]" /> Generated Lesson Blueprint
-              </h4>
+              <div className="flex items-center justify-between border-b border-[#ECF0F6] pb-3 mb-4">
+                <h4 className="font-sora font-bold text-base text-[#0B1D3A] flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#2E9B58]" /> Generated Lesson Blueprint
+                </h4>
+                {generatedOutput && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setPlainTextDoc({
+                          title: `${lessonSubject}: ${lessonTopic} - Lesson Blueprint (.txt)`,
+                          subtitle: `Curriculum Plan for ${gradeLevel}`,
+                          content: generatedOutput,
+                          subjectId: lessonSubject,
+                          docType: 'LESSON PLAN & RUBRIC (.txt)',
+                        });
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 text-xs font-semibold transition cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export Plain Text (.txt)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <div className="flex-1 bg-[#F6F8FB] border border-[#D8DFEA] rounded-2xl p-5 font-mono text-xs text-[#0B1D3A] overflow-y-auto min-h-[320px] max-h-[600px] leading-relaxed whitespace-pre-wrap">
                 {loadingAi ? (
@@ -512,6 +578,17 @@ Include:
           <span>{assignedToast}</span>
         </div>
       )}
+
+      {/* Plain Text Document Modal */}
+      <PlainTextDocumentModal
+        isOpen={plainTextDoc !== null}
+        onClose={() => setPlainTextDoc(null)}
+        title={plainTextDoc?.title || 'Educational Document (.txt)'}
+        subtitle={plainTextDoc?.subtitle}
+        content={plainTextDoc?.content || ''}
+        subjectId={plainTextDoc?.subjectId}
+        docType={plainTextDoc?.docType}
+      />
     </div>
   );
 };

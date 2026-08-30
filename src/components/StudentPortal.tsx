@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import { Course, Assignment, StudentDetail, QuizQuestion, Announcement, UserRole } from '../types';
 import { generateContent } from '../services/api';
-import { GraduationCap, BookOpen, Clock, Award, CheckCircle2, Send, Sparkles, AlertCircle, HelpCircle, RefreshCw, ChevronRight, Calculator, Calendar, Timer, Filter, ShieldCheck, Megaphone, Bell, Trash2 } from 'lucide-react';
+import { 
+  GraduationCap, BookOpen, Clock, Award, CheckCircle2, Send, Sparkles, 
+  AlertCircle, HelpCircle, RefreshCw, ChevronRight, Calculator, Calendar, 
+  Timer, Filter, ShieldCheck, Megaphone, Bell, Trash2, FileText, Download, 
+  Code, Eye, Check, ArrowRight
+} from 'lucide-react';
 import { JSSMathExplorer } from './JSSMathExplorer';
 import { WeeklyStudyScheduler } from './WeeklyStudyScheduler';
 import { PomodoroTimer } from './PomodoroTimer';
 import { CyberSecurityExplorer } from './CyberSecurityExplorer';
 import { StudentAnnouncementsBoard } from './StudentAnnouncementsBoard';
 import { ConfirmationModal } from './ConfirmationModal';
+import { IconicFilterBar } from './IconicFilterBar';
+import { PlainTextDocumentModal } from './PlainTextDocumentModal';
+import { COURSE_ICON_REGISTRY, getCourseIconInfo, convertToPlainTextDocument } from '../utils/courseIconRegistry';
 
 interface StudentPortalProps {
   student: StudentDetail;
@@ -35,15 +43,26 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   onNavigateRole,
 }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'announcements' | 'courses' | 'jss-math' | 'cyber-security' | 'study-scheduler' | 'pomodoro' | 'quiz' | 'ai-tutor'>('dashboard');
-  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('All');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
+  const [selectedResourceType, setSelectedResourceType] = useState<'all' | 'curriculum' | 'assignments' | 'quizzes' | 'notes'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'plaintext'>('grid');
   
+  // Plain Text Document Modal State
+  const [plainTextDoc, setPlainTextDoc] = useState<{
+    title: string;
+    subtitle?: string;
+    content: string;
+    subjectId?: string;
+    docType?: string;
+  } | null>(null);
+
   // AI Tutor state
   const [tutorQuery, setTutorQuery] = useState('');
   const [tutorSubject, setTutorSubject] = useState('Computer Science');
   const [tutorMessages, setTutorMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; time: string }>>([
     {
       sender: 'ai',
-      text: `Hello ${student.name}! I am your iLearnit-365 AI Study Companion. How can I help you prepare for CS-301 or AP Calculus today?`,
+      text: `Hello ${student.name}! I am your iLearnit-365 AI Study Companion. How can I help you prepare for CS-301, AP Calculus, or Cybersecurity today?`,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -65,19 +84,28 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     (a) => !a.readBy.includes(student.id || student.studentId || 'st-101')
   ).length;
 
-  // Subject-filtered data views
-  const filteredCourses = selectedSubjectFilter === 'All'
+  // Subject-filtered data views with iconic categorization
+  const filteredCourses = selectedSubjectFilter === 'all'
     ? courses
-    : courses.filter((c) =>
-        c.title.toLowerCase().includes(selectedSubjectFilter.toLowerCase()) ||
-        c.code.toLowerCase().includes(selectedSubjectFilter.toLowerCase())
-      );
+    : courses.filter((c) => {
+        const iconInfo = getCourseIconInfo(c.title + ' ' + c.code);
+        return iconInfo.id.toLowerCase() === selectedSubjectFilter.toLowerCase() ||
+               c.title.toLowerCase().includes(selectedSubjectFilter.toLowerCase()) ||
+               c.code.toLowerCase().includes(selectedSubjectFilter.toLowerCase());
+      });
 
-  const filteredAssignments = selectedSubjectFilter === 'All'
+  const filteredAssignments = selectedSubjectFilter === 'all'
     ? localAssignments
-    : localAssignments.filter((a) =>
-        a.courseTitle.toLowerCase().includes(selectedSubjectFilter.toLowerCase())
-      );
+    : localAssignments.filter((a) => {
+        const iconInfo = getCourseIconInfo(a.courseTitle);
+        return iconInfo.id.toLowerCase() === selectedSubjectFilter.toLowerCase() ||
+               a.courseTitle.toLowerCase().includes(selectedSubjectFilter.toLowerCase());
+      });
+
+  const handleOpenPlainTextDoc = (item: any, type: 'course' | 'assignment' | 'topic' | 'quiz' | 'cyber') => {
+    const doc = convertToPlainTextDocument(item, type);
+    setPlainTextDoc(doc);
+  };
 
   const fetchAiExplanationForQuiz = async (qIndex: number, chosenOptionIdx: number) => {
     const q = quizQuestions[qIndex];
@@ -317,33 +345,24 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
         </div>
       </div>
 
-      {/* Subject Filter Bar */}
-      <div className="bg-white border border-[#D8DFEA] rounded-2xl p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs font-bold text-navy font-mono">
-          <Filter className="w-3.5 h-3.5 text-blue-600" />
-          <span>Subject Filter:</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {['All', 'Mathematics', 'Computer Science', 'Physics', 'Literature'].map((subj) => (
-            <button
-              key={subj}
-              onClick={() => {
-                setSelectedSubjectFilter(subj);
-                if (subj !== 'All') {
-                  setTutorSubject(subj);
-                }
-              }}
-              className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                selectedSubjectFilter === subj
-                  ? 'bg-navy text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {subj}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Iconic Filter Bar */}
+      <IconicFilterBar
+        selectedSubject={selectedSubjectFilter}
+        onSelectSubject={(subj) => {
+          setSelectedSubjectFilter(subj);
+          if (subj !== 'all') {
+            const info = getCourseIconInfo(subj);
+            setTutorSubject(info.name);
+          }
+        }}
+        selectedResourceType={selectedResourceType}
+        onSelectResourceType={setSelectedResourceType}
+        viewMode={viewMode}
+        onSelectViewMode={setViewMode}
+        searchPlaceholder="Search enrolled courses, modules, or assignments..."
+        showResourceTypeTabs={true}
+        showViewModeToggles={true}
+      />
 
       {/* Overview Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -580,42 +599,149 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
       {/* TAB CONTENT: COURSES */}
       {activeTab === 'courses' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {courses.map((course) => (
-              <div key={course.id} className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm space-y-4">
-                <div className="flex items-start justify-between border-b border-[#ECF0F6] pb-4">
-                  <div>
-                    <span className="text-xs font-mono font-bold text-[#2F6FE0]">{course.code}</span>
-                    <h3 className="font-sora font-bold text-lg text-[#0B1D3A] mt-1">{course.title}</h3>
-                    <p className="text-xs text-[#5B6A88]">Instructor: {course.instructor}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-2xl font-sora font-extrabold text-[#2E9B58]">{course.grade}</span>
-                    <p className="text-[10px] text-[#5B6A88]">Current Grade</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs text-[#5B6A88]">
-                  <div className="bg-[#F6F8FB] p-3 rounded-xl border border-[#D8DFEA]">
-                    <span className="block text-[10px] uppercase font-mono text-[#7A8AA8]">Modules</span>
-                    <span className="font-bold text-[#0B1D3A]">{course.completedModules} / {course.totalModules} Completed</span>
-                  </div>
-                  <div className="bg-[#F6F8FB] p-3 rounded-xl border border-[#D8DFEA]">
-                    <span className="block text-[10px] uppercase font-mono text-[#7A8AA8]">Schedule</span>
-                    <span className="font-bold text-[#0B1D3A]">{course.schedule}</span>
-                  </div>
-                </div>
-
-                <div className="bg-[#ECF0F6]/50 p-3 rounded-xl border border-[#D8DFEA] flex items-center justify-between text-xs">
-                  <div>
-                    <p className="text-[10px] font-mono text-[#7A8AA8]">UPCOMING TASK</p>
-                    <p className="font-medium text-[#0B1D3A]">{course.nextAssignment}</p>
-                  </div>
-                  <span className="text-[11px] font-semibold text-[#CC9A2E]">{course.nextDueDate}</span>
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-[#D8DFEA] rounded-2xl p-4 shadow-xs">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-blue-600" />
+              <h3 className="font-sora font-bold text-base text-[#0B1D3A]">
+                Enrolled Academic Courses ({filteredCourses.length})
+              </h3>
+              {selectedSubjectFilter !== 'all' && (
+                <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold border border-blue-200 font-mono">
+                  Filter: {getCourseIconInfo(selectedSubjectFilter).name}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 font-medium">Export / View All:</span>
+              <button
+                onClick={() => {
+                  const combinedText = filteredCourses.map((c) => convertToPlainTextDocument(c, 'course').content).join('\n\n' + '='.repeat(60) + '\n\n');
+                  setPlainTextDoc({
+                    title: 'iLearnit-365 All Enrolled Courses Syllabus (.txt)',
+                    subtitle: `Export of ${filteredCourses.length} Registered Courses`,
+                    content: combinedText,
+                    subjectId: selectedSubjectFilter,
+                    docType: 'COURSE SYLLABUS DOCUMENT',
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all cursor-pointer border border-slate-300"
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <span>All Courses as .txt</span>
+              </button>
+            </div>
           </div>
+
+          {viewMode === 'plaintext' ? (
+            /* Plain Text Direct Inline View */
+            <div className="space-y-4">
+              {filteredCourses.map((course) => {
+                const doc = convertToPlainTextDocument(course, 'course');
+                return (
+                  <div key={course.id} className="bg-slate-950 text-slate-100 rounded-3xl p-6 border border-slate-800 shadow-xl space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                      <div>
+                        <span className="text-xs font-mono text-cyan-400 font-bold uppercase">{course.code}</span>
+                        <h4 className="font-sora font-bold text-base text-white">{course.title}</h4>
+                      </div>
+                      <button
+                        onClick={() => setPlainTextDoc(doc)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold cursor-pointer shadow-sm"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Open Full Screen
+                      </button>
+                    </div>
+                    <pre className="font-mono text-xs text-slate-300 leading-relaxed bg-slate-900/90 p-4 rounded-2xl border border-slate-800/80 overflow-x-auto whitespace-pre-wrap">
+                      {doc.content}
+                    </pre>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Grid / Card View with Vibrant Iconic Styling */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredCourses.map((course) => {
+                const iconInfo = getCourseIconInfo(course.title + ' ' + course.code);
+                const IconComponent = iconInfo.icon;
+                return (
+                  <div 
+                    key={course.id} 
+                    className="bg-white border border-[#D8DFEA] hover:border-blue-400/80 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all space-y-5 flex flex-col justify-between"
+                  >
+                    <div className="space-y-4">
+                      {/* Course Header with Custom Iconic Badge */}
+                      <div className="flex items-start justify-between border-b border-[#ECF0F6] pb-4 gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-12 h-12 rounded-2xl ${iconInfo.badgeBg} ${iconInfo.colorClass} border flex items-center justify-center shrink-0 shadow-xs`}>
+                            <IconComponent className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono font-bold text-[#2F6FE0]">{course.code}</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                                {iconInfo.name}
+                              </span>
+                            </div>
+                            <h3 className="font-sora font-bold text-lg text-[#0B1D3A] mt-1 leading-snug">{course.title}</h3>
+                            <p className="text-xs text-[#5B6A88]">Instructor: {course.instructor}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-2xl font-sora font-extrabold text-[#2E9B58]">{course.grade}</span>
+                          <p className="text-[10px] text-[#5B6A88]">Current Grade</p>
+                        </div>
+                      </div>
+
+                      {/* Course Stats */}
+                      <div className="grid grid-cols-2 gap-3 text-xs text-[#5B6A88]">
+                        <div className="bg-[#F6F8FB] p-3 rounded-xl border border-[#D8DFEA]">
+                          <span className="block text-[10px] uppercase font-mono text-[#7A8AA8]">Modules</span>
+                          <span className="font-bold text-[#0B1D3A]">{course.completedModules} / {course.totalModules} Completed</span>
+                        </div>
+                        <div className="bg-[#F6F8FB] p-3 rounded-xl border border-[#D8DFEA]">
+                          <span className="block text-[10px] uppercase font-mono text-[#7A8AA8]">Schedule</span>
+                          <span className="font-bold text-[#0B1D3A]">{course.schedule}</span>
+                        </div>
+                      </div>
+
+                      {/* Upcoming Task */}
+                      <div className="bg-[#ECF0F6]/60 p-3 rounded-xl border border-[#D8DFEA] flex items-center justify-between text-xs">
+                        <div>
+                          <p className="text-[10px] font-mono text-[#7A8AA8]">UPCOMING TASK</p>
+                          <p className="font-medium text-[#0B1D3A]">{course.nextAssignment}</p>
+                        </div>
+                        <span className="text-[11px] font-semibold text-[#CC9A2E]">{course.nextDueDate}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons: Plain text & AI Tutor */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#ECF0F6]">
+                      <button
+                        onClick={() => handleOpenPlainTextDoc(course, 'course')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F6F8FB] hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer border border-[#D8DFEA]"
+                        title="View Course Modules converted as Plain Text Document"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-slate-600" />
+                        <span>View .txt Doc</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setTutorSubject(course.title);
+                          setActiveTab('ai-tutor');
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#132C54] hover:bg-[#0B1D3A] text-white text-xs font-semibold transition cursor-pointer shadow-xs"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-[#CC9A2E]" />
+                        <span>Ask AI Tutor</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -773,18 +899,21 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
                 <Sparkles className="w-5 h-5 text-[#CC9A2E]" />
                 <h3 className="font-sora font-bold text-xl text-[#0B1D3A]">Gemini AI Study Companion</h3>
               </div>
-              <p className="text-xs text-[#5B6A88]">Interactive 1-on-1 step-by-step tutoring and problem solving.</p>
+              <p className="text-xs text-[#5B6A88]">Interactive 1-on-1 step-by-step tutoring, problem solving & study tips.</p>
             </div>
 
             {/* Controls: Subject Dropdown & Clear Messages */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 bg-[#F6F8FB] border border-[#D8DFEA] px-3 py-1.5 rounded-xl text-xs font-semibold text-[#0B1D3A]">
-                <span>Subject:</span>
+                <span>Active Context:</span>
                 <select
                   value={tutorSubject}
                   onChange={(e) => setTutorSubject(e.target.value)}
                   className="bg-transparent font-medium text-[#2F6FE0] focus:outline-none cursor-pointer"
                 >
+                  {Object.values(COURSE_ICON_REGISTRY).map((c) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
                   <option value="Computer Science">Computer Science</option>
                   <option value="Calculus">AP Calculus BC</option>
                   <option value="Physics">Physics II</option>
@@ -802,6 +931,48 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* Quick Switch Iconic Subject Pills */}
+          <div className="bg-[#F6F8FB] border border-[#D8DFEA] rounded-2xl p-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                Instant Subject Context Switcher:
+              </span>
+              <span className="text-[10px] text-slate-400">Click icon to switch AI focus</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.values(COURSE_ICON_REGISTRY).map((subj) => {
+                const SubjIcon = subj.icon;
+                const isActive = tutorSubject.toLowerCase().includes(subj.name.toLowerCase()) || 
+                                 tutorSubject.toLowerCase() === subj.id.toLowerCase();
+                return (
+                  <button
+                    key={subj.id}
+                    onClick={() => {
+                      setTutorSubject(subj.name);
+                      setTutorMessages((prev) => [
+                        ...prev,
+                        {
+                          sender: 'ai',
+                          text: `Switched focus to **${subj.name}**. I'm ready with lessons, formulas, practice questions, and plain text notes for ${subj.name}. What would you like to work on?`,
+                          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        },
+                      ]);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                      isActive
+                        ? `${subj.badgeBg} ${subj.colorClass} border-current ring-1 ring-current shadow-xs`
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <SubjIcon className="w-3.5 h-3.5" />
+                    <span>{subj.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -829,7 +1000,7 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
 
             {loadingTutor && (
               <div className="flex items-center gap-2 text-xs text-[#2F6FE0] bg-white border border-[#D8DFEA] p-3 rounded-2xl w-fit">
-                <RefreshCw className="w-4 h-4 animate-spin" /> AI Tutor is writing a response...
+                <RefreshCw className="w-4 h-4 animate-spin" /> AI Tutor is writing a response for {tutorSubject}...
               </div>
             )}
           </div>
@@ -841,7 +1012,7 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
               value={tutorQuery}
               onChange={(e) => setTutorQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendTutorMessage()}
-              placeholder={`Ask a question about ${tutorSubject}...`}
+              placeholder={`Ask a question about ${tutorSubject}... (e.g. explain concepts, solve sample questions)`}
               className="flex-1 bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-4 py-3 text-xs text-[#0B1D3A] focus:outline-none focus:border-[#2F6FE0]"
             />
             <button
@@ -873,6 +1044,17 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
         title="Clear Tutor Conversation?"
         description="Are you sure you want to reset this study conversation? All current study messages and problem explanations will be cleared."
         confirmLabel="Yes, Clear Chat"
+      />
+
+      {/* Reusable Plain Text Document Modal for All Educational Data (.txt) */}
+      <PlainTextDocumentModal
+        isOpen={plainTextDoc !== null}
+        onClose={() => setPlainTextDoc(null)}
+        title={plainTextDoc?.title || 'Educational Document (.txt)'}
+        subtitle={plainTextDoc?.subtitle}
+        content={plainTextDoc?.content || ''}
+        subjectId={plainTextDoc?.subjectId}
+        docType={plainTextDoc?.docType}
       />
     </div>
   );

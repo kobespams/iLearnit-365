@@ -40,6 +40,8 @@ import {
 import { convertCyberLessonToCBTConfig } from '../data/cbtQuestionBank';
 import { CBTExamInterface } from './CBTExamInterface';
 import { CyberPracticeLab } from './CyberPracticeLab';
+import { PlainTextDocumentModal } from './PlainTextDocumentModal';
+import { convertToPlainTextDocument } from '../utils/courseIconRegistry';
 
 interface CyberSecurityExplorerProps {
   onBack?: () => void;
@@ -61,6 +63,15 @@ export const CyberSecurityExplorer: React.FC<CyberSecurityExplorerProps> = ({
   const [expandedNotesWeek, setExpandedNotesWeek] = useState<number | null>(1);
   const [activeModalLesson, setActiveModalLesson] = useState<{ course: CyberLessonCourse; lesson: CyberWeeklyLesson } | null>(null);
   const [testResults, setTestResults] = useState<StudentCyberTestResult[]>([]);
+  
+  // Plain Text Document Modal State
+  const [plainTextDoc, setPlainTextDoc] = useState<{
+    title: string;
+    subtitle?: string;
+    content: string;
+    subjectId?: string;
+    docType?: string;
+  } | null>(null);
 
   const currentCourse = getCourseByLevel(selectedLevel);
   const studentName = currentUser?.name || 'Enrolled Student';
@@ -244,9 +255,22 @@ export const CyberSecurityExplorer: React.FC<CyberSecurityExplorerProps> = ({
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-bold border border-indigo-200 dark:border-indigo-800">
-                  {currentCourse.levelLabel}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-bold border border-indigo-200 dark:border-indigo-800">
+                    {currentCourse.levelLabel}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const doc = convertToPlainTextDocument(currentCourse, 'cyber');
+                      setPlainTextDoc(doc);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-bold transition cursor-pointer border border-slate-300 dark:border-slate-600"
+                    title="Export Course Modules as Plain Text (.txt)"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>View Plain Text (.txt)</span>
+                  </button>
+                </div>
                 <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white mt-2">
                   {currentCourse.title}
                 </h2>
@@ -724,6 +748,16 @@ export const CyberSecurityExplorer: React.FC<CyberSecurityExplorerProps> = ({
         </div>
       )}
 
+      {/* Reusable Plain Text Document Modal */}
+      <PlainTextDocumentModal
+        isOpen={plainTextDoc !== null}
+        onClose={() => setPlainTextDoc(null)}
+        title={plainTextDoc?.title || 'Cybersecurity Document (.txt)'}
+        subtitle={plainTextDoc?.subtitle}
+        content={plainTextDoc?.content || ''}
+        subjectId={plainTextDoc?.subjectId}
+        docType={plainTextDoc?.docType}
+      />
     </div>
   );
 };

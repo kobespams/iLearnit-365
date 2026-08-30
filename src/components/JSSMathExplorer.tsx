@@ -27,6 +27,8 @@ import {
 import { JSS_MATH_CURRICULUM } from '../data/jssMathCurriculum';
 import { JSSLessonTopic, JSSLevel, WeeklyLessonBreakdown } from '../types';
 import { generateContent } from '../services/api';
+import { PlainTextDocumentModal } from './PlainTextDocumentModal';
+import { convertToPlainTextDocument } from '../utils/courseIconRegistry';
 
 interface JSSMathExplorerProps {
   onAssignToClass?: (lesson: JSSLessonTopic) => void;
@@ -38,6 +40,14 @@ export const JSSMathExplorer: React.FC<JSSMathExplorerProps> = ({ onAssignToClas
   const [viewMode, setViewMode] = useState<'lessons' | 'weekly-pacing'>('weekly-pacing');
   const [activeTerm, setActiveTerm] = useState<1 | 2 | 3>(1);
   const [selectedWeekFilter, setSelectedWeekFilter] = useState<number | 'all'>('all');
+
+  const [plainTextDoc, setPlainTextDoc] = useState<{
+    title: string;
+    subtitle?: string;
+    content: string;
+    subjectId?: string;
+    docType?: string;
+  } | null>(null);
 
   const [revealedAnswers, setRevealedAnswers] = useState<Record<number, boolean>>({});
   const [revealedHints, setRevealedHints] = useState<Record<number, boolean>>({});
@@ -204,6 +214,25 @@ User Question/Task: ${promptToUse}`;
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => {
+                const combined = JSS_MATH_CURRICULUM
+                  .filter((l) => l.level === selectedLevel)
+                  .map((l) => convertToPlainTextDocument(l, 'topic').content)
+                  .join('\n\n' + '='.repeat(60) + '\n\n');
+                setPlainTextDoc({
+                  title: `West African ${selectedLevel} Mathematics Curriculum (.txt)`,
+                  subtitle: `Full Official Syllabus & Weekly Breakdowns for ${selectedLevel}`,
+                  content: combined,
+                  subjectId: 'math',
+                  docType: 'MATHEMATICS CURRICULUM SYLLABUS (.txt)',
+                });
+              }}
+              className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 font-semibold px-4 py-2.5 rounded-xl transition text-sm cursor-pointer shadow-sm"
+              title="Convert and view entire syllabus as Plain Text (.txt)"
+            >
+              <FileText className="w-4 h-4 text-cyan-400" /> Export Plain Text (.txt)
+            </button>
             <button
               onClick={() => handleRunAiPrompt(`Generate a Weekly Lesson Plan Update for ${selectedLevel} Term ${activeTerm} covering all required subtopics, weekly objectives, class activities, and BECE style questions.`)}
               className="inline-flex items-center gap-2 bg-gradient-to-r from-gold to-amber-600 text-slate-950 font-bold px-4 py-2.5 rounded-xl hover:opacity-90 transition shadow-lg text-sm cursor-pointer"
@@ -893,6 +922,17 @@ User Question/Task: ${promptToUse}`;
           </div>
         </div>
       )}
+
+      {/* Plain Text Document Modal */}
+      <PlainTextDocumentModal
+        isOpen={plainTextDoc !== null}
+        onClose={() => setPlainTextDoc(null)}
+        title={plainTextDoc?.title || 'Educational Document (.txt)'}
+        subtitle={plainTextDoc?.subtitle}
+        content={plainTextDoc?.content || ''}
+        subjectId={plainTextDoc?.subjectId}
+        docType={plainTextDoc?.docType}
+      />
     </div>
   );
 };

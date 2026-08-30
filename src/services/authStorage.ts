@@ -75,8 +75,6 @@ function setStoredJson<T>(key: string, value: T): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-    // Trigger custom window event for real-time reactivity across tabs/components
-    window.dispatchEvent(new CustomEvent('ilearnit_storage_update', { detail: { key } }));
   } catch (err) {
     console.error('Failed to write to localStorage:', err);
   }
