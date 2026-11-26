@@ -44,8 +44,8 @@ export const COURSE_ICON_REGISTRY: Record<string, CourseIconMeta> = {
   math: {
     id: 'math',
     code: 'MATH',
-    name: 'Mathematics & Calculus',
-    category: 'Mathematics',
+    name: 'Mathematics',
+    category: 'General & Pure Mathematics',
     icon: Calculator,
     iconName: 'Calculator',
     colorClass: 'text-emerald-600 dark:text-emerald-400',
@@ -54,8 +54,24 @@ export const COURSE_ICON_REGISTRY: Record<string, CourseIconMeta> = {
     textColor: 'text-emerald-700 dark:text-emerald-300',
     accentBg: 'bg-emerald-600',
     gradient: 'from-emerald-500 to-teal-700',
-    description: 'Foundational algebra, geometry, trigonometry, calculus, and mathematical problem-solving.',
-    levelBadge: 'JSS1 - SS3 & Advanced',
+    description: 'Foundational algebra, linear equations, Euclidean geometry, statistics, and number theory.',
+    levelBadge: 'JSS 1 - SSS 3 / BECE',
+  },
+  calculus: {
+    id: 'calculus',
+    code: 'CALC',
+    name: 'Calculus',
+    category: 'Advanced Analysis & Calculus',
+    icon: Sparkles,
+    iconName: 'Sparkles',
+    colorClass: 'text-violet-600 dark:text-violet-400',
+    badgeBg: 'bg-violet-50 dark:bg-violet-950/60',
+    borderColor: 'border-violet-200 dark:border-violet-800',
+    textColor: 'text-violet-700 dark:text-violet-300',
+    accentBg: 'bg-violet-600',
+    gradient: 'from-violet-600 to-indigo-800',
+    description: 'Differential calculus, limits, derivatives, Riemann integration, differential equations, and series.',
+    levelBadge: 'Senior Secondary & Higher Ed',
   },
   cs: {
     id: 'cs',
@@ -209,7 +225,10 @@ export const COURSE_ICON_REGISTRY: Record<string, CourseIconMeta> = {
 export function getCourseMeta(subjectOrTitle: string = ''): CourseIconMeta {
   const norm = subjectOrTitle.toLowerCase().trim();
 
-  if (norm.includes('math') || norm.includes('calculus') || norm.includes('algebra') || norm.includes('geometry')) {
+  if (norm.includes('calculus') || norm.includes('derivative') || norm.includes('integral') || norm.includes('calc-') || norm.includes('differential')) {
+    return COURSE_ICON_REGISTRY.calculus;
+  }
+  if (norm.includes('math') || norm.includes('algebra') || norm.includes('geometry') || norm.includes('trigonometry') || norm.includes('mth-') || norm.includes('statistics')) {
     return COURSE_ICON_REGISTRY.math;
   }
   if (norm.includes('cyber') || norm.includes('security') || norm.includes('threat') || norm.includes('sec-')) {

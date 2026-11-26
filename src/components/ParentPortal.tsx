@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { StudentDetail, TeacherNote } from '../types';
 import { generateContent } from '../services/api';
-import { Award, Users, MessageSquare, Sparkles, Check, Send, HeartHandshake, CheckCircle2, ChevronRight, RefreshCw, Calendar, Calculator, BarChart3 } from 'lucide-react';
-import { JSSMathExplorer } from './JSSMathExplorer';
+import { Award, Users, MessageSquare, Sparkles, Send, RefreshCw, Calendar, Calculator, BarChart3, ShieldCheck, Search } from 'lucide-react';
+import { JSSAllSubjectsExplorer } from './JSSAllSubjectsExplorer';
+import { getRegisteredStudents, updateUserProfile } from '../services/authStorage';
+import { AITransparencyPanel } from './AITransparencyPanel';
+import { saveAIOutputRecord } from '../services/aiTransparencyService';
+import { recordAuditAction } from '../services/auditTrailService';
 
 interface ParentPortalProps {
   child: StudentDetail;
@@ -11,6 +15,9 @@ interface ParentPortalProps {
 
 export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'jss-math' | 'notes' | 'ai-advisor'>('overview');
+  const [viewedChild, setViewedChild] = useState<StudentDetail>(child);
+  const [pinLookup, setPinLookup] = useState('');
+  const [lookupNotice, setLookupNotice] = useState<string | null>(null);
   
   // Note Reply State
   const [localNotes, setLocalNotes] = useState<TeacherNote[]>(notes);
@@ -38,11 +45,23 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
     setAdvisorResponses((prev) => [...prev, { sender: 'user', text: userText, time: timeStr }]);
     setLoadingAdvisor(true);
 
-    const prompt = `Child Context: ${child.name}, Junior (Grade 11), GPA 3.92, Top 5% ranking.\nParent Query: ${userText}`;
+    const prompt = `Child Context: ${viewedChild.name}, ${viewedChild.gradeLevel}, GPA ${viewedChild.gpa}.\nParent Query: ${userText}`;
     const result = await generateContent({
       prompt,
-      systemInstruction: 'You are an empathetic, expert High School Guidance Counselor and Educational Specialist advising parents.',
+      systemInstruction: 'You are an empathetic, expert Guidance Counselor and Educational Specialist advising parents.',
       temperature: 0.5,
+    });
+
+    saveAIOutputRecord({
+      contextKey: `parent-advisor-${advisorResponses.length}`,
+      sourceFeature: 'AI Parent Advisor',
+      subject: viewedChild.gradeLevel || 'Family Advising',
+      promptSummary: userText,
+      aiResponse: result.text,
+      modelUsed: 'Gemini Flash + Academic Progress Context',
+      methodology: `Tailored family guidance using ${viewedChild.name}'s GPA (${viewedChild.gpa}) and attendance (${viewedChild.attendance}).`,
+      groundingSources: ['Student Gradebook Summary', 'Family Academic Counseling Rubric'],
+      createdByUser: viewedChild.parentName || 'Parent',
     });
 
     setAdvisorResponses((prev) => [
@@ -56,6 +75,59 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
     setLoadingAdvisor(false);
   };
 
+  const handleLookupChildByPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = pinLookup.trim();
+    if (!clean) return;
+    const students = getRegisteredStudents();
+    const found = students.find((s) => s.pin === clean || s.studentId.toLowerCase() === clean.toLowerCase());
+    if (found) {
+      setViewedChild(found);
+      setLookupNotice(`Loaded verified progress report for ${found.name} (PIN ${found.pin}).`);
+      recordAuditAction({
+        category: 'PII_ACCESS',
+        action: 'Parent Checked Child Progress via PIN',
+        actorId: found.parentName || 'PAR-GUARDIAN',
+        actorName: found.parentName || 'Verified Parent',
+        actorRole: 'PARENT',
+        targetResource: `Student ${found.name} (${found.studentId})`,
+        status: 'SUCCESS',
+        details: `Verified 4-digit PIN access for child record in ${found.gradeLevel}.`,
+      });
+    } else {
+      setLookupNotice('No student found with that 4-digit PIN (try demo PINs 8842, 9102, or 7731).');
+    }
+  };
+
+  const handleToggleParentalConsent = (verified: boolean) => {
+    const consentCode = verified ? viewedChild.consentCode || `CONSENT-${Math.floor(100000 + Math.random() * 900000)}` : undefined;
+    updateUserProfile(viewedChild.id, {
+      parentalConsentVerified: verified,
+      consentCode,
+      parentalConsentTimestamp: new Date().toISOString(),
+    });
+    setViewedChild((prev) => ({
+      ...prev,
+      parentalConsentVerified: verified,
+      consentCode,
+    }));
+    recordAuditAction({
+      category: 'SYSTEM_CONFIG',
+      action: verified ? 'Parent Confirmed Minor Consent' : 'Parent Revoked Minor Consent',
+      actorId: viewedChild.parentName || 'PAR-GUARDIAN',
+      actorName: viewedChild.parentName || 'Parent / Guardian',
+      actorRole: 'PARENT',
+      targetResource: `${viewedChild.name} (${viewedChild.studentId})`,
+      status: verified ? 'SUCCESS' : 'WARNING',
+      details: `NDPA/COPPA/GDPR minor consent status set to ${verified ? 'VERIFIED' : 'REVOKED'}.`,
+    });
+    setLookupNotice(
+      verified
+        ? `Parental consent confirmed (${consentCode}).`
+        : 'Parental consent withdrawn for minor account.'
+    );
+  };
+
   const handleSendTeacherReply = () => {
     if (!replyText.trim() || !activeNoteId) return;
 
@@ -66,6 +138,16 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
           : n
       )
     );
+    recordAuditAction({
+      category: 'FEEDBACK_DISPATCH',
+      action: 'Parent Replied to Teacher Note',
+      actorId: viewedChild.parentName || 'PAR-GUARDIAN',
+      actorName: viewedChild.parentName || 'Parent / Guardian',
+      actorRole: 'PARENT',
+      targetResource: `Note ${activeNoteId} (Child: ${viewedChild.name})`,
+      status: 'SUCCESS',
+      details: `Guardian submitted communication response to educator.`,
+    });
     setReplyText('');
   };
 
@@ -80,16 +162,16 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-sora font-bold text-2xl text-[#0B1D3A]">
-                {child.parentName || 'Parent Account'}
+                {viewedChild.parentName || 'Parent Account'}
               </h2>
-              <span className="bg-[#CC9A2E]/10 text-[#CC9A2E] text-xs font-semibold px-2.5 py-0.5 rounded-full border border-[#CC9A2E]/20">
+              <span className="bg-[#CC9A2E]/10 text-[#0B1D3A] text-xs font-semibold px-2.5 py-0.5 rounded-full border border-[#CC9A2E]/30">
                 PIN Verified
               </span>
             </div>
             <p className="text-xs text-[#5B6A88] mt-1 flex flex-wrap items-center gap-2">
-              <Users className="w-4 h-4 text-[#CC9A2E]" /> Linked Child: <span className="font-semibold text-[#0B1D3A]">{child.name}</span> ({child.gradeLevel})
+              <Users className="w-4 h-4 text-[#CC9A2E]" /> Linked Child: <span className="font-semibold text-[#0B1D3A]">{viewedChild.name}</span> ({viewedChild.gradeLevel})
               <span className="bg-blue-50 text-blue-800 text-[11px] font-mono font-bold px-2 py-0.5 rounded border border-blue-200">
-                PIN: {child.pin || 'Protected'}
+                PIN: {viewedChild.pin || 'Protected'}
               </span>
             </p>
           </div>
@@ -115,7 +197,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
                 : 'text-blue-700 bg-blue-50/80 hover:bg-blue-100'
             }`}
           >
-            <Calculator className="w-3.5 h-3.5" /> JSS Math Syllabus
+            <Calculator className="w-3.5 h-3.5" /> JSS 1–3 All Subjects
           </button>
           <button
             onClick={() => setActiveTab('notes')}
@@ -140,6 +222,43 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
         </div>
       </div>
 
+      {/* Clear First Action: See my child's progress via 4-digit PIN */}
+      <form
+        onSubmit={handleLookupChildByPin}
+        className="bg-white border border-[#D8DFEA] rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+      >
+        <div className="flex items-center gap-2.5">
+          <Search className="w-4 h-4 text-[#CC9A2E] shrink-0" />
+          <div>
+            <div className="font-sora font-bold text-xs text-[#0B1D3A]">See my child&apos;s progress</div>
+            <div className="text-[11px] text-[#5B6A88]">Enter your child&apos;s 4-digit Student PIN (demo PINs: 8842, 9102, 7731)</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            maxLength={12}
+            value={pinLookup}
+            onChange={(e) => setPinLookup(e.target.value)}
+            placeholder="4-digit PIN (e.g. 8842)"
+            aria-label="Child 4-digit PIN"
+            className="bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3 py-2 text-xs font-mono text-[#0B1D3A] w-44"
+          />
+          <button
+            type="submit"
+            className="bg-[#0B1D3A] hover:bg-[#132C54] text-white font-sora font-bold text-xs px-4 py-2 rounded-xl cursor-pointer transition"
+          >
+            Load Progress
+          </button>
+        </div>
+      </form>
+
+      {lookupNotice && (
+        <div role="status" className="bg-blue-50 border border-blue-200 text-blue-900 rounded-xl px-4 py-2.5 text-xs font-medium">
+          {lookupNotice}
+        </div>
+      )}
+
       {/* TAB CONTENT: OVERVIEW */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -149,16 +268,16 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
               <div className="flex items-center justify-between border-b border-[#ECF0F6] pb-4">
                 <div>
                   <span className="text-xs font-mono font-bold text-[#CC9A2E]">Spring 2026 Progress Report</span>
-                  <h3 className="font-sora font-bold text-xl text-[#0B1D3A]">{child.name}'s Gradebook</h3>
+                  <h3 className="font-sora font-bold text-xl text-[#0B1D3A]">{viewedChild.name}&apos;s Gradebook</h3>
                 </div>
                 <div className="text-right">
-                  <span className="text-3xl font-sora font-extrabold text-[#2E9B58]">{child.gpa}</span>
+                  <span className="text-3xl font-sora font-extrabold text-[#2E9B58]">{viewedChild.gpa}</span>
                   <p className="text-[10px] text-[#7A8AA8]">Unweighted GPA</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {child.subjects.map((sub, idx) => (
+                {viewedChild.subjects.map((sub, idx) => (
                   <div key={idx} className="p-4 rounded-2xl bg-[#F6F8FB] border border-[#D8DFEA] flex items-center justify-between">
                     <div>
                       <h4 className="font-sora font-semibold text-sm text-[#0B1D3A]">{sub.name}</h4>
@@ -172,13 +291,13 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
               </div>
 
               {/* Term-by-Term Performance Summary */}
-              {child.termPerformance && (
+              {viewedChild.termPerformance && (
                 <div className="pt-4 border-t border-[#ECF0F6]">
                   <h4 className="font-sora font-bold text-sm text-[#0B1D3A] mb-3 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-blue-600" /> Term-by-Term Academy Performance Trend
                   </h4>
                   <div className="grid grid-cols-3 gap-3">
-                    {child.termPerformance.map((term, i) => (
+                    {viewedChild.termPerformance.map((term, i) => (
                       <div key={i} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center space-y-1">
                         <span className="text-[10px] uppercase font-mono font-bold text-slate-500">{term.term}</span>
                         <div className="text-lg font-sora font-extrabold text-navy">{term.gpa} GPA</div>
@@ -191,12 +310,12 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
               )}
 
               {/* Conduct & Remarks */}
-              {child.conductRemarks && (
+              {viewedChild.conductRemarks && (
                 <div className="p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-xs space-y-1">
                   <span className="font-bold text-amber-900 uppercase text-[10px] tracking-wider font-mono">
                     Official Principal & Counselor Conduct Note:
                   </span>
-                  <p className="text-amber-950 font-medium leading-relaxed">{child.conductRemarks}</p>
+                  <p className="text-amber-950 font-medium leading-relaxed">{viewedChild.conductRemarks}</p>
                 </div>
               )}
             </div>
@@ -209,7 +328,7 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
                 </div>
                 <div>
                   <span className="text-xs text-[#5B6A88]">Attendance Record</span>
-                  <p className="font-sora font-extrabold text-xl text-[#0B1D3A]">{child.attendance}</p>
+                  <p className="font-sora font-extrabold text-xl text-[#0B1D3A]">{viewedChild.attendance}</p>
                   <p className="text-[10px] text-[#2E9B58] font-semibold">1 Absences (Excused)</p>
                 </div>
               </div>
@@ -220,15 +339,47 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
                 </div>
                 <div>
                   <span className="text-xs text-[#5B6A88]">Learning Habit Streak</span>
-                  <p className="font-sora font-extrabold text-xl text-[#0B1D3A]">{child.streakDays} Consecutive Days</p>
+                  <p className="font-sora font-extrabold text-xl text-[#0B1D3A]">{viewedChild.streakDays} Consecutive Days</p>
                   <p className="text-[10px] text-[#CC9A2E] font-semibold">Daily Homework Completed</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Recent Teacher Communications (4 cols) */}
+          {/* Recent Teacher Communications & Minor Parental Consent (4 cols) */}
           <div className="lg:col-span-4 space-y-6">
+            <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm space-y-3">
+              <div className="flex items-center gap-2 font-sora font-bold text-sm text-[#0B1D3A]">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Minor Consent (NDPA · COPPA · GDPR)</span>
+              </div>
+              <p className="text-xs text-[#5B6A88] leading-relaxed">
+                Status:{' '}
+                <strong className={viewedChild.parentalConsentVerified ? 'text-emerald-700' : 'text-amber-700'}>
+                  {viewedChild.parentalConsentVerified ? 'Parental Consent Verified ✓' : 'Consent Pending / Revoked'}
+                </strong>
+                {viewedChild.consentCode && (
+                  <span className="block font-mono text-[11px] text-slate-600 mt-1">Code: {viewedChild.consentCode}</span>
+                )}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleParentalConsent(true)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
+                >
+                  Confirm Consent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleParentalConsent(false)}
+                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold cursor-pointer"
+                >
+                  Revoke Consent
+                </button>
+              </div>
+            </div>
+
             <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-[#ECF0F6] pb-3">
                 <h4 className="font-sora font-bold text-base text-[#0B1D3A] flex items-center gap-2">
@@ -257,9 +408,9 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
         </div>
       )}
 
-      {/* TAB CONTENT: JSS MATH */}
+      {/* TAB CONTENT: JSS 1-3 ALL SUBJECTS */}
       {activeTab === 'jss-math' && (
-        <JSSMathExplorer />
+        <JSSAllSubjectsExplorer />
       )}
 
       {/* TAB CONTENT: TEACHER MESSAGES */}
@@ -338,6 +489,19 @@ export const ParentPortal: React.FC<ParentPortalProps> = ({ child, notes }) => {
                   }`}
                 >
                   {msg.text}
+                  {msg.sender === 'ai' && i > 0 && (
+                    <AITransparencyPanel
+                      contextKey={`parent-advisor-${i - 1}`}
+                      sourceFeature="AI Parent Advisor"
+                      subject={viewedChild.gradeLevel || 'Family Advising'}
+                      promptSummary={advisorResponses[i - 1]?.text || 'Parent inquiry'}
+                      aiResponse={msg.text}
+                      methodology={`Personalized response grounded in ${viewedChild.name}'s GPA (${viewedChild.gpa}) and attendance (${viewedChild.attendance}).`}
+                      groundingSources={['Student Academic Record', 'Family Guidance Rubric']}
+                      createdByUser={viewedChild.parentName || 'Parent'}
+                      compact
+                    />
+                  )}
                 </div>
                 <span className="text-[10px] text-[#7A8AA8] mt-1 px-1">{msg.time}</span>
               </div>

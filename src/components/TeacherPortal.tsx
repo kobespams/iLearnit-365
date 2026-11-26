@@ -6,11 +6,22 @@ import {
   ChevronRight, RefreshCw, PenTool, Calculator, BarChart3, TrendingUp, 
   ArrowRight, Megaphone, Download, Copy, Eye 
 } from 'lucide-react';
-import { JSSMathExplorer } from './JSSMathExplorer';
+import { JSSAllSubjectsExplorer } from './JSSAllSubjectsExplorer';
 import { ClassQuizAnalytics } from './ClassQuizAnalytics';
 import { StudentAnnouncementsBoard } from './StudentAnnouncementsBoard';
 import { COURSE_ICON_REGISTRY, getCourseIconInfo, convertToPlainTextDocument } from '../utils/courseIconRegistry';
 import { PlainTextDocumentModal } from './PlainTextDocumentModal';
+import { getRegisteredStudents } from '../services/authStorage';
+import { AITransparencyPanel } from './AITransparencyPanel';
+import {
+  getAIOutputRecords,
+  reviewOrOverrideAIRecord,
+  saveAIOutputRecord,
+} from '../services/aiTransparencyService';
+import { recordAuditAction } from '../services/auditTrailService';
+import { AIOutputRecord } from '../types';
+
+const TEACHER_CLASSES_STORAGE_KEY = 'ilearnit_teacher_classes_v1';
 
 interface TeacherPortalProps {
   classes: ClassGroup[];
@@ -21,6 +32,7 @@ interface TeacherPortalProps {
   onMarkAllAnnouncementsRead?: () => void;
   onDeleteAnnouncement?: (id: string) => void;
   onNavigateRole?: (role: UserRole) => void;
+  initialOpenCreateClass?: boolean;
 }
 
 export const TeacherPortal: React.FC<TeacherPortalProps> = ({ 
@@ -32,9 +44,31 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
   onMarkAllAnnouncementsRead = () => {},
   onDeleteAnnouncement,
   onNavigateRole,
+  initialOpenCreateClass = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'classes' | 'analytics' | 'jss-math' | 'broadcasts' | 'grading' | 'ai-lesson-gen'>('classes');
-  const [selectedClass, setSelectedClass] = useState<ClassGroup>(classes[0]);
+  const [activeTab, setActiveTab] = useState<'classes' | 'analytics' | 'jss-math' | 'broadcasts' | 'grading' | 'ai-lesson-gen' | 'ai-review'>('classes');
+  const [localClasses, setLocalClasses] = useState<ClassGroup[]>(() => {
+    try {
+      const raw = window.localStorage.getItem(TEACHER_CLASSES_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return classes;
+  });
+  const [selectedClass, setSelectedClass] = useState<ClassGroup>(localClasses[0] || classes[0]);
+  const [showCreateClassForm, setShowCreateClassForm] = useState<boolean>(initialOpenCreateClass);
+  const [newClassName, setNewClassName] = useState('');
+  const [newClassCode, setNewClassCode] = useState('');
+  const [newClassSchedule, setNewClassSchedule] = useState('Mon / Wed • 10:00 AM');
+  const [newClassTopic, setNewClassTopic] = useState('');
+
+  // AI Review & Override state
+  const [aiRecords, setAiRecords] = useState<AIOutputRecord[]>(() => getAIOutputRecords());
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [overrideDraft, setOverrideDraft] = useState('');
+  const [overrideNoteDraft, setOverrideNoteDraft] = useState('');
   const [assignedToast, setAssignedToast] = useState<string | null>(null);
   
   // Plain Text Modal state
@@ -51,31 +85,39 @@ export const TeacherPortal: React.FC<TeacherPortalProps> = ({
     setTimeout(() => setAssignedToast(null), 3500);
   };
 
-  // Grading Queue state
-  const [gradingQueue, setGradingQueue] = useState([
-    {
-      id: 'sub-1',
-      studentName: 'Alex Chen',
-      assignmentTitle: 'Binary Search Tree Balancing Algorithm',
-      courseCode: 'CS-301',
-      submittedDate: 'Today, 2:15 PM',
-      codeSnippet: `class Node {\n  int key, height;\n  Node left, right;\n}\n\nint getBalance(Node N) {\n  if (N == null) return 0;\n  return height(N.left) - height(N.right);\n}`,
-      score: '95',
-      feedback: 'Excellent clean recursive rotation handling.',
-      status: 'pending',
-    },
-    {
-      id: 'sub-2',
-      studentName: 'Maya Patel',
-      assignmentTitle: 'Taylor Series Remainder Theorem',
-      courseCode: 'MATH-402',
-      submittedDate: 'Yesterday, 8:40 PM',
-      codeSnippet: `Error bound R_n(x) <= (M / (n+1)!) * |x - a|^(n+1)\nEvaluated for sin(x) expansion up to 5th degree.`,
-      score: '90',
-      feedback: 'Good steps. Pay attention to Lagrange boundary conditions.',
-      status: 'pending',
-    },
-  ]);
+  // Real registered students list
+  const registeredStudentsList = getRegisteredStudents();
+  const displayStudents = registeredStudentsList.length > 0 ? registeredStudentsList : students;
+
+  // Grading Queue state with real registered students
+  const [gradingQueue, setGradingQueue] = useState(() => {
+    const student1 = displayStudents[0] || { name: 'Samuel Adebayo' };
+    const student2 = displayStudents[1] || { name: 'Chidinma Okafor' };
+    return [
+      {
+        id: 'sub-1',
+        studentName: student1.name,
+        assignmentTitle: 'Binary Search Tree Balancing Algorithm',
+        courseCode: 'CS-301',
+        submittedDate: 'Today, 2:15 PM',
+        codeSnippet: `class Node {\n  int key, height;\n  Node left, right;\n}\n\nint getBalance(Node N) {\n  if (N == null) return 0;\n  return height(N.left) - height(N.right);\n}`,
+        score: '95',
+        feedback: 'Excellent clean recursive rotation handling.',
+        status: 'pending',
+      },
+      {
+        id: 'sub-2',
+        studentName: student2.name,
+        assignmentTitle: 'Taylor Series Remainder Theorem',
+        courseCode: 'MATH-402',
+        submittedDate: 'Yesterday, 8:40 PM',
+        codeSnippet: `Error bound R_n(x) <= (M / (n+1)!) * |x - a|^(n+1)\nEvaluated for sin(x) expansion up to 5th degree.`,
+        score: '90',
+        feedback: 'Good steps. Pay attention to Lagrange boundary conditions.',
+        status: 'pending',
+      },
+    ];
+  });
 
   // AI Lesson Generator state
   const [lessonTopic, setLessonTopic] = useState('');
@@ -106,13 +148,121 @@ Include:
     });
 
     setGeneratedOutput(result.text);
+    saveAIOutputRecord({
+      contextKey: `teacher-lesson-${lessonTopic.trim().toLowerCase().replace(/\s+/g, '-')}`,
+      sourceFeature: 'AI Lesson Architect',
+      subject: lessonSubject,
+      promptSummary: `${gradeLevel}: ${lessonTopic}`,
+      aiResponse: result.text,
+      modelUsed: 'Gemini Flash + NERDC / Bloom Curriculum Rubric',
+      methodology: `Synthesized 45-min classroom agenda, worked examples, and 4-tier rubric for ${gradeLevel}.`,
+      groundingSources: [`${lessonSubject} Scheme`, 'Bloom Taxonomy Lesson Standard'],
+      createdByUser: 'Dr. Sarah Jenkins (Educator)',
+    });
+    setAiRecords(getAIOutputRecords());
     setLoadingAi(false);
   };
 
+  const handleCreateClass = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClassName.trim() || !newClassCode.trim()) return;
+    const created: ClassGroup = {
+      id: `cls-${Date.now()}`,
+      code: newClassCode.trim().toUpperCase(),
+      name: newClassName.trim(),
+      studentsCount: 1,
+      avgGrade: 'A',
+      pendingGrading: 0,
+      schedule: newClassSchedule.trim() || 'Mon / Wed • 10:00 AM',
+      recentTopic: newClassTopic.trim() || 'Course Orientation & Syllabus',
+    };
+    const updated = [created, ...localClasses];
+    setLocalClasses(updated);
+    setSelectedClass(created);
+    setShowCreateClassForm(false);
+    setNewClassName('');
+    setNewClassCode('');
+    setNewClassTopic('');
+    try {
+      window.localStorage.setItem(TEACHER_CLASSES_STORAGE_KEY, JSON.stringify(updated));
+    } catch {}
+    recordAuditAction({
+      category: 'SYSTEM_CONFIG',
+      action: `Teacher Created Class ${created.code}`,
+      actorId: 'TCH-PORTAL-01',
+      actorName: 'Dr. Sarah Jenkins',
+      actorRole: 'TEACHER',
+      targetResource: `${created.name} (${created.code})`,
+      status: 'SUCCESS',
+      details: `Schedule: ${created.schedule} • Topic: ${created.recentTopic}`,
+    });
+    showAssignedToast(`Created class "${created.name}" (${created.code})!`);
+  };
+
+  const handleApproveAIRecord = (id: string) => {
+    const updated = reviewOrOverrideAIRecord({
+      id,
+      reviewStatus: 'approved',
+      reviewedBy: 'Dr. Sarah Jenkins',
+      reviewNote: 'Verified accurate for classroom use.',
+    });
+    setAiRecords(updated);
+    recordAuditAction({
+      category: 'FEEDBACK_DISPATCH',
+      action: 'Teacher Approved AI Explanation',
+      actorId: 'TCH-PORTAL-01',
+      actorName: 'Dr. Sarah Jenkins',
+      actorRole: 'TEACHER',
+      targetResource: `AI Record ${id}`,
+      status: 'SUCCESS',
+      details: 'Educator verified AI output accuracy for student consumption.',
+    });
+    showAssignedToast('AI explanation verified and marked approved.');
+  };
+
+  const handleSaveAIOverride = (id: string) => {
+    if (!overrideDraft.trim()) return;
+    const updated = reviewOrOverrideAIRecord({
+      id,
+      reviewStatus: 'overridden',
+      teacherOverrideText: overrideDraft.trim(),
+      reviewedBy: 'Dr. Sarah Jenkins',
+      reviewNote: overrideNoteDraft.trim() || 'Educator override applied.',
+    });
+    setAiRecords(updated);
+    recordAuditAction({
+      category: 'FEEDBACK_DISPATCH',
+      action: 'Teacher Overrode AI Output',
+      actorId: 'TCH-PORTAL-01',
+      actorName: 'Dr. Sarah Jenkins',
+      actorRole: 'TEACHER',
+      targetResource: `AI Record ${id}`,
+      status: 'INFO',
+      details: `Published educator correction: ${overrideNoteDraft.trim() || 'Educator override applied.'}`,
+    });
+    setEditingRecordId(null);
+    setOverrideDraft('');
+    setOverrideNoteDraft('');
+    showAssignedToast('Teacher override published — students will now see your correction.');
+  };
+
   const handleGradingSubmit = (id: string) => {
+    const targetItem = gradingQueue.find((item) => item.id === id);
     setGradingQueue((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: 'graded' } : item))
     );
+    if (targetItem) {
+      recordAuditAction({
+        category: 'SYSTEM_CONFIG',
+        action: `Teacher Graded Submission (${targetItem.courseCode})`,
+        actorId: 'TCH-PORTAL-01',
+        actorName: 'Dr. Sarah Jenkins',
+        actorRole: 'TEACHER',
+        targetResource: `${targetItem.studentName} — ${targetItem.assignmentTitle}`,
+        status: 'SUCCESS',
+        details: `Assigned score ${targetItem.score}% with educator feedback.`,
+      });
+    }
   };
 
   return (
@@ -161,7 +311,7 @@ Include:
                 : 'text-blue-700 bg-blue-50/80 hover:bg-blue-100'
             }`}
           >
-            <Calculator className="w-3.5 h-3.5" /> JSS Math Syllabus
+            <Calculator className="w-3.5 h-3.5" /> JSS 1–3 All Subjects
           </button>
           <button
             onClick={() => setActiveTab('broadcasts')}
@@ -193,15 +343,110 @@ Include:
           >
             <Sparkles className="w-3.5 h-3.5 text-[#CC9A2E]" /> AI Lesson Architect
           </button>
+          <button
+            onClick={() => {
+              setAiRecords(getAIOutputRecords());
+              setActiveTab('ai-review');
+            }}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'ai-review'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" /> AI Review &amp; Override ({aiRecords.length})
+          </button>
         </div>
       </div>
 
       {/* TAB CONTENT: MY CLASSES */}
       {activeTab === 'classes' && (
         <div className="space-y-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-sora font-bold text-lg text-[#0B1D3A]">Active Classes ({localClasses.length})</h3>
+              <p className="text-xs text-[#5B6A88]">Select a class card to view roster or create a new classroom.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCreateClassForm((p) => !p)}
+              className="bg-[#0B1D3A] hover:bg-[#132C54] text-white font-sora font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Plus className="w-4 h-4 text-amber-300" />
+              <span>Create a class</span>
+            </button>
+          </div>
+
+          {showCreateClassForm && (
+            <form
+              onSubmit={handleCreateClass}
+              className="bg-white border-2 border-[#2E9B58]/40 rounded-3xl p-6 shadow-md space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="font-sora font-bold text-base text-[#0B1D3A]">Create a New Classroom</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateClassForm(false)}
+                  className="text-xs text-slate-500 hover:text-slate-900 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#0B1D3A] mb-1">Class Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newClassName}
+                    onChange={(e) => setNewClassName(e.target.value)}
+                    placeholder="e.g., SS3 Physics UTME Prep"
+                    className="w-full bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3 py-2 text-xs text-[#0B1D3A]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#0B1D3A] mb-1">Course Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newClassCode}
+                    onChange={(e) => setNewClassCode(e.target.value)}
+                    placeholder="e.g., PHY-301"
+                    className="w-full bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3 py-2 text-xs text-[#0B1D3A] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#0B1D3A] mb-1">Schedule</label>
+                  <input
+                    type="text"
+                    value={newClassSchedule}
+                    onChange={(e) => setNewClassSchedule(e.target.value)}
+                    className="w-full bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3 py-2 text-xs text-[#0B1D3A]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#0B1D3A] mb-1">Initial Syllabus Topic</label>
+                  <input
+                    type="text"
+                    value={newClassTopic}
+                    onChange={(e) => setNewClassTopic(e.target.value)}
+                    placeholder="e.g., Current Electricity"
+                    className="w-full bg-[#F6F8FB] border border-[#D8DFEA] rounded-xl px-3 py-2 text-xs text-[#0B1D3A]"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="bg-[#2E9B58] hover:bg-green-700 text-white font-sora font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer"
+              >
+                Save &amp; Launch Class
+              </button>
+            </form>
+          )}
+
           {/* Class Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {classes.map((cls) => {
+            {localClasses.map((cls) => {
               const iconInfo = getCourseIconInfo(cls.name + ' ' + cls.code);
               const IconComponent = iconInfo.icon;
               return (
@@ -267,48 +512,22 @@ Include:
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#ECF0F6]">
-                  <tr className="hover:bg-[#F6F8FB]">
-                    <td className="py-3.5 px-4 font-semibold text-[#0B1D3A] flex items-center gap-2">
-                      <img src={students[0].avatar} alt="" className="w-6 h-6 rounded-full object-cover" />
-                      {students[0].name}
-                    </td>
-                    <td className="py-3.5 px-4 text-[#5B6A88]">{students[0].gradeLevel}</td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#2E9B58]">{students[0].gpa}</td>
-                    <td className="py-3.5 px-4 text-[#5B6A88]">{students[0].attendance}</td>
-                    <td className="py-3.5 px-4 text-right">
-                      <span className="bg-[#2E9B58]/10 text-[#2E9B58] font-semibold px-2.5 py-0.5 rounded-full text-[10px]">
-                        On Track
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-[#F6F8FB]">
-                    <td className="py-3.5 px-4 font-semibold text-[#0B1D3A] flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[#2F6FE0] text-white flex items-center justify-center text-[10px]">M</div>
-                      Maya Patel
-                    </td>
-                    <td className="py-3.5 px-4 text-[#5B6A88]">Grade 11 - Junior</td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#2E9B58]">3.85</td>
-                    <td className="py-3.5 px-4 text-[#5B6A88]">97.0%</td>
-                    <td className="py-3.5 px-4 text-right">
-                      <span className="bg-[#2E9B58]/10 text-[#2E9B58] font-semibold px-2.5 py-0.5 rounded-full text-[10px]">
-                        On Track
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-[#F6F8FB]">
-                    <td className="py-3.5 px-4 font-semibold text-[#0B1D3A] flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[#CC9A2E] text-white flex items-center justify-center text-[10px]">J</div>
-                      Jordan Lee
-                    </td>
-                    <td className="py-3.5 px-4 text-[#5B6A88]">Grade 11 - Junior</td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#CC9A2E]">3.42</td>
-                    <td className="py-3.5 px-4 text-[#5B6A88]">94.2%</td>
-                    <td className="py-3.5 px-4 text-right">
-                      <span className="bg-[#CC9A2E]/10 text-[#CC9A2E] font-semibold px-2.5 py-0.5 rounded-full text-[10px]">
-                        Review Needed
-                      </span>
-                    </td>
-                  </tr>
+                  {displayStudents.map((st, idx) => (
+                    <tr key={st.id || idx} className="hover:bg-[#F6F8FB]">
+                      <td className="py-3.5 px-4 font-semibold text-[#0B1D3A] flex items-center gap-2">
+                        <img src={st.avatar} alt={`${st.name} profile avatar`} className="w-6 h-6 rounded-full object-cover border border-slate-300" />
+                        <span>{st.name}</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-[#5B6A88]">{st.gradeLevel || 'Registered Student'}</td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#2E9B58]">{st.gpa || 3.85}</td>
+                      <td className="py-3.5 px-4 text-[#5B6A88]">{st.attendance || '96.5%'}</td>
+                      <td className="py-3.5 px-4 text-right">
+                        <span className="bg-[#2E9B58]/10 text-[#2E9B58] font-semibold px-2.5 py-0.5 rounded-full text-[10px]">
+                          Active Scholar ✓
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -349,9 +568,12 @@ Include:
         />
       )}
 
-      {/* TAB CONTENT: JSS MATH */}
+      {/* TAB CONTENT: JSS 1-3 ALL SUBJECTS */}
       {activeTab === 'jss-math' && (
-        <JSSMathExplorer
+        <JSSAllSubjectsExplorer
+          onAssignSubjectToClass={(subj, lvl) => {
+            showAssignedToast(`Assigned "${subj.subjectName}" (${lvl} NERDC Syllabus) to ${selectedClass.name}!`);
+          }}
           onAssignToClass={(lesson) => {
             showAssignedToast(`Assigned "${lesson.title}" (${lesson.level}) to ${selectedClass.name}!`);
           }}
@@ -559,7 +781,19 @@ Include:
                     <p className="text-xs">Architecting lesson plan & rubric with Gemini...</p>
                   </div>
                 ) : generatedOutput ? (
-                  generatedOutput
+                  <div className="space-y-4">
+                    <div>{generatedOutput}</div>
+                    <AITransparencyPanel
+                      contextKey={`teacher-lesson-${lessonTopic.trim().toLowerCase().replace(/\s+/g, '-')}`}
+                      sourceFeature="AI Lesson Architect"
+                      subject={lessonSubject}
+                      promptSummary={`${gradeLevel}: ${lessonTopic}`}
+                      aiResponse={generatedOutput}
+                      methodology={`Constructed Bloom-aligned lesson plan and 4-tier rubric for ${gradeLevel}.`}
+                      groundingSources={[`${lessonSubject} Curriculum`, 'Bloom Taxonomy Rubric Standard']}
+                      createdByUser="Dr. Sarah Jenkins"
+                    />
+                  </div>
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-12 space-y-2">
                     <Sparkles className="w-8 h-8 text-slate-300" />
@@ -568,6 +802,123 @@ Include:
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: AI REVIEW & OVERRIDE */}
+      {activeTab === 'ai-review' && (
+        <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="border-b border-[#ECF0F6] pb-4">
+            <h3 className="font-sora font-bold text-xl text-[#0B1D3A]">
+              AI Transparency &amp; Educator Override Queue
+            </h3>
+            <p className="text-xs text-[#5B6A88] mt-1">
+              Review AI-generated student explanations, inspect how each answer was produced, approve verified answers, or publish a teacher correction that immediately appears to students.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {aiRecords.map((rec) => (
+              <div
+                key={rec.id}
+                className="p-5 rounded-2xl bg-[#F6F8FB] border border-[#D8DFEA] space-y-3 text-xs"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="font-mono font-bold text-blue-700">{rec.sourceFeature}</span>
+                    <span className="mx-1.5 text-slate-400">•</span>
+                    <span className="font-bold text-[#0B1D3A]">{rec.subject}</span>
+                    <span className="mx-1.5 text-slate-400">•</span>
+                    <span className="text-slate-600">{rec.createdByUser} ({rec.createdAt})</span>
+                  </div>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full font-mono font-bold text-[10px] uppercase ${
+                      rec.reviewStatus === 'approved'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : rec.reviewStatus === 'overridden'
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                        : 'bg-slate-200 text-slate-800 border border-slate-300'
+                    }`}
+                  >
+                    {rec.reviewStatus.replace('_', ' ')}
+                  </span>
+                </div>
+
+                <div className="font-semibold text-[#0B1D3A]">Prompt: {rec.promptSummary}</div>
+                <div className="p-3 rounded-xl bg-white border border-slate-200 text-slate-800 whitespace-pre-wrap leading-relaxed">
+                  <strong className="block text-[11px] text-slate-500 mb-1">Original AI Output ({rec.modelUsed}):</strong>
+                  {rec.aiResponse}
+                </div>
+                <div className="text-[11px] text-slate-600">
+                  <strong>How produced:</strong> {rec.methodology} ({rec.groundingSources.join(' · ')})
+                </div>
+
+                {rec.teacherOverrideText && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950">
+                    <strong className="block text-[11px] mb-1">Active Educator Override ({rec.reviewedBy}):</strong>
+                    {rec.teacherOverrideText}
+                  </div>
+                )}
+
+                {editingRecordId === rec.id ? (
+                  <div className="space-y-2 pt-2 border-t border-slate-200">
+                    <label className="block font-bold text-[#0B1D3A]">Corrected / Overridden Explanation for Students</label>
+                    <textarea
+                      rows={3}
+                      value={overrideDraft}
+                      onChange={(e) => setOverrideDraft(e.target.value)}
+                      placeholder="Write the authoritative teacher explanation..."
+                      className="w-full bg-white border border-slate-300 rounded-xl p-3 text-xs text-[#0B1D3A]"
+                    />
+                    <input
+                      type="text"
+                      value={overrideNoteDraft}
+                      onChange={(e) => setOverrideNoteDraft(e.target.value)}
+                      placeholder="Optional educator note (e.g., Clarified WAEC/JAMB formula)..."
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-[#0B1D3A]"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveAIOverride(rec.id)}
+                        className="px-4 py-2 rounded-xl bg-[#0B1D3A] text-white font-bold cursor-pointer"
+                      >
+                        Publish Override
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingRecordId(null)}
+                        className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 font-semibold cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleApproveAIRecord(rec.id)}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+                    >
+                      Approve AI Answer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingRecordId(rec.id);
+                        setOverrideDraft(rec.teacherOverrideText || rec.aiResponse);
+                        setOverrideNoteDraft(rec.reviewNote || '');
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-[#0B1D3A] font-bold cursor-pointer"
+                    >
+                      Edit &amp; Override AI Output
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -9,6 +9,11 @@ export interface GenerateOptions {
   };
 }
 
+export async function generateWithAI(prompt: string, systemInstruction?: string): Promise<string> {
+  const res = await generateContent({ prompt, systemInstruction });
+  return res.text;
+}
+
 export async function generateContent(options: GenerateOptions): Promise<{ text: string; durationMs: number }> {
   const startTime = Date.now();
   try {
@@ -18,7 +23,7 @@ export async function generateContent(options: GenerateOptions): Promise<{ text:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: options.model || 'gemini-3.6-flash',
+        model: options.model || 'gemini-3.7-flash',
         prompt: options.prompt,
         systemInstruction: options.systemInstruction,
         temperature: options.temperature ?? 0.7,
@@ -51,7 +56,7 @@ function generateFallbackResponse(options: GenerateOptions): string {
   const lower = prompt.toLowerCase();
 
   if (image) {
-    return `### Visual Analysis Summary\n\nI analyzed the uploaded image file (${image.mimeType}).\n\n- **Key Elements Detected**: Layout structure, visual components, textual labels, and spatial alignment.\n- **Primary Colors & Aesthetics**: Modern neutral palette with high contrast guidelines.\n- **Assessment**: The image presents a clean composition suitable for digital interface review or technical document processing.\n\n*Note: To connect to live Gemini 3.6 Flash vision analysis, configure your \`GEMINI_API_KEY\` in Settings > Secrets.*`;
+    return `### Visual Analysis Summary\n\nI analyzed the uploaded image file (${image.mimeType}).\n\n- **Key Elements Detected**: Layout structure, visual components, textual labels, and spatial alignment.\n- **Primary Colors & Aesthetics**: Modern neutral palette with high contrast guidelines.\n- **Assessment**: The image presents a clean composition suitable for digital interface review or technical document processing.\n\n*Note: To connect to live Gemini 3.7 Flash vision analysis, configure your \`GEMINI_API_KEY\` in Settings > Secrets.*`;
   }
 
   if (lower.includes('code') || lower.includes('function') || lower.includes('react') || lower.includes('typescript')) {

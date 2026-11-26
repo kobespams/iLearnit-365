@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "iLearnit-365 Learning Platform",
+  "short_name": "iLearnit-365",
+  "description": "Nigerian NERDC & JAMB UTME (2000-2025) learning center, Test Driller, and privacy-first portals for Students, Teachers, and Parents.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0B1D3A",
+  "theme_color": "#0B1D3A",
+  "icons": [
+    {
+      "src": "/src/assets/images/ilearnit_logo_1786816502338.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/src/assets/images/ilearnit_logo_1786816502338.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

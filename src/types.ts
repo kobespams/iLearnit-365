@@ -1,5 +1,68 @@
-export type UserRole = 'hub' | 'login' | 'register' | 'student' | 'teacher' | 'parent' | 'jss_math' | 'cyber_security' | 'cca_music' | 'cbt' | 'admin' | 'cheal_hub' | 'ilearnit_security';
+export type UserRole = 
+  | 'hub' 
+  | 'login' 
+  | 'register' 
+  | 'student' 
+  | 'study_hub' 
+  | 'teacher' 
+  | 'parent' 
+  | 'jss_math' 
+  | 'cyber_security' 
+  | 'cca_music' 
+  | 'cbt' 
+  | 'results' 
+  | 'cgpa' 
+  | 'support' 
+  | 'admin' 
+  | 'cheal_hub' 
+  | 'ilearnit_security' 
+  | 'deployment'
+  | 'backend_dashboard'
+  | 'module_responses'
+  | 'jamb_driller'
+  | 'privacy_center';
 export type AppTab = 'workbench' | 'code' | 'vision' | 'notes';
+export type DocumentFileType = 'PDF' | 'DOCX' | 'IMG' | 'TXT';
+
+export interface E2EEMessage {
+  id: string;
+  channelId: string;
+  subjectName: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'student' | 'teacher' | 'system';
+  senderAvatar: string;
+  plaintext: string;
+  ciphertext: string;
+  timestamp: string;
+  keyFingerprint: string;
+  verifiedEducator?: boolean;
+  isEndorsedAnswer?: boolean;
+  formulaSnippet?: string;
+}
+
+export interface StudyFlashcard {
+  id: string;
+  subjectId: string;
+  subjectName: string;
+  frontQuestion: string;
+  backAnswer: string;
+  keyConcept: string;
+  formulaOrCode?: string;
+  difficulty: 'Foundation' | 'Intermediate' | 'Mastery';
+}
+
+export interface StudySubjectChannel {
+  id: string;
+  name: string;
+  code: string;
+  leadEducator: string;
+  educatorAvatar: string;
+  description: string;
+  colorTheme: string;
+  activeLearnersCount: number;
+  encryptionFingerprint: string;
+}
 
 export interface RegisteredUser {
   id: string;
@@ -27,6 +90,11 @@ export interface RegisteredUser {
   registrationTimestamp: string;
   securityVerified: boolean;
   conductRemarks?: string;
+  ageBracket?: 'under_13' | '13_to_17' | 'adult';
+  parentalConsentVerified?: boolean;
+  parentalConsentEmail?: string;
+  parentalConsentTimestamp?: string;
+  consentCode?: string;
   subjects: { name: string; score: number; letter: string }[];
   termPerformance?: { term: string; gpa: number; position: string; totalScore: number }[];
 }
@@ -131,7 +199,11 @@ export interface StudentDetail {
   streakDays: number;
   parentName?: string;
   conductRemarks?: string;
-  subjects: { name: string; score: number; letter: string }[];
+  ageBracket?: 'under_13' | '13_to_17' | 'adult';
+  parentalConsentVerified?: boolean;
+  parentalConsentEmail?: string;
+  consentCode?: string;
+  subjects: { name: string; score: number; letter: string; teacher?: string }[];
   termPerformance?: { term: string; gpa: number; position: string; totalScore: number }[];
 }
 
@@ -422,4 +494,135 @@ export interface CBTResultSlip {
   flaggedQuestionIds: string[];
   questionBank: CBTQuestion[];
 }
+
+export interface DocumentCallout {
+  type: 'info' | 'warning' | 'tip' | 'formula' | 'code';
+  title: string;
+  body: string;
+}
+
+export interface DocumentSection {
+  id: string;
+  heading: string;
+  content: string;
+  callout?: DocumentCallout;
+  diagramSnippet?: string;
+  codeExample?: {
+    language: string;
+    code: string;
+    output?: string;
+  };
+}
+
+export interface DocumentKeyTerm {
+  term: string;
+  definition: string;
+}
+
+export interface DocumentQuizQuestion {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface EducationalDocument {
+  id: string;
+  title: string;
+  subtitle: string;
+  subjectId: string;
+  subjectName: string;
+  courseCode: string;
+  fileType?: DocumentFileType;
+  category: 'Textbook Chapter' | 'Revision Monograph' | 'Lab Manual' | 'Curriculum Guide' | 'Formula Sheet' | 'Examination Syllabus';
+  author: string;
+  authorTitle: string;
+  authorAvatar?: string;
+  readingTimeMinutes: number;
+  gradeLevel: string;
+  publishedDate: string;
+  tags: string[];
+  summary: string;
+  sections: DocumentSection[];
+  keyTerms: DocumentKeyTerm[];
+  comprehensionQuiz: DocumentQuizQuestion[];
+}
+
+export type HighlightColor = 'yellow' | 'emerald' | 'cyan' | 'pink' | 'amber';
+
+export interface DocumentAnnotation {
+  id: string;
+  docId: string;
+  sectionId: string;
+  sectionHeading: string;
+  selectedText: string;
+  comment: string;
+  color: HighlightColor;
+  timestamp: string;
+  createdAt: number;
+}
+
+// -------------------------------------------------------------
+// JAMB UTME COMPILED SCHEME & 2000-2025 PAST QUESTIONS
+// -------------------------------------------------------------
+
+export type JAMBStream = 'Core' | 'Science' | 'Arts & Humanities' | 'Commercial';
+
+export interface JAMBSyllabusTopic {
+  topicNumber: number;
+  title: string;
+  subtopics: string[];
+  learningObjectives: string[];
+  nerdcAlignment: string;
+}
+
+export interface JAMBSubjectScheme {
+  id: string;
+  name: string;
+  code: string;
+  stream: JAMBStream;
+  isCompulsory?: boolean;
+  overview: string;
+  recommendedTexts: string[];
+  topics: JAMBSyllabusTopic[];
+}
+
+export interface JAMBPastQuestion {
+  id: string;
+  subjectId: string;
+  subjectName: string;
+  stream: JAMBStream;
+  year: number; // 2000 - 2025
+  topic: string;
+  syllabusReference: string;
+  questionText: string;
+  options: [string, string, string, string];
+  correctIndex: number;
+  explanation: string;
+  difficulty: 'Foundation' | 'Standard' | 'Challenging';
+}
+
+// -------------------------------------------------------------
+// AI TRANSPARENCY & EDUCATOR REVIEW / OVERRIDE
+// -------------------------------------------------------------
+
+export interface AIOutputRecord {
+  id: string;
+  contextKey: string;
+  sourceFeature: 'AI Study Tutor' | 'Quiz Diagnostic' | 'JAMB AI Breakdown' | 'AI Lesson Architect' | 'AI Parent Advisor';
+  subject: string;
+  promptSummary: string;
+  aiResponse: string;
+  modelUsed: string;
+  methodology: string;
+  groundingSources: string[];
+  createdAt: string;
+  createdByUser: string;
+  reviewStatus: 'pending_review' | 'approved' | 'overridden' | 'flagged';
+  teacherOverrideText?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+}
+
 

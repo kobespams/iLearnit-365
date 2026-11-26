@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Course, Assignment, StudentDetail, QuizQuestion, Announcement, UserRole } from '../types';
 import { generateContent } from '../services/api';
 import { 
   GraduationCap, BookOpen, Clock, Award, CheckCircle2, Send, Sparkles, 
   AlertCircle, HelpCircle, RefreshCw, ChevronRight, Calculator, Calendar, 
   Timer, Filter, ShieldCheck, Megaphone, Bell, Trash2, FileText, Download, 
-  Code, Eye, Check, ArrowRight
+  Code, Eye, Check, ArrowRight, Layers, Compass, Star, ChevronDown
 } from 'lucide-react';
-import { JSSMathExplorer } from './JSSMathExplorer';
+import { JSSAllSubjectsExplorer } from './JSSAllSubjectsExplorer';
 import { WeeklyStudyScheduler } from './WeeklyStudyScheduler';
 import { PomodoroTimer } from './PomodoroTimer';
 import { CyberSecurityExplorer } from './CyberSecurityExplorer';
@@ -16,6 +16,12 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { IconicFilterBar } from './IconicFilterBar';
 import { PlainTextDocumentModal } from './PlainTextDocumentModal';
 import { COURSE_ICON_REGISTRY, getCourseIconInfo, convertToPlainTextDocument } from '../utils/courseIconRegistry';
+import { getAcademicLevelCurriculum } from '../utils/academicLevelCurriculum';
+import { RecentActivityWidget } from './RecentActivityWidget';
+import { RecentDocumentActivity } from '../services/recentActivityService';
+import { EDUCATIONAL_DOCUMENTS } from '../data/educationalDocuments';
+import { AITransparencyPanel } from './AITransparencyPanel';
+import { saveAIOutputRecord } from '../services/aiTransparencyService';
 
 interface StudentPortalProps {
   student: StudentDetail;
@@ -84,10 +90,54 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     (a) => !a.readBy.includes(student.id || student.studentId || 'st-101')
   ).length;
 
+  // Curriculum areas of learning according to student's academic level
+  const studentCurriculum = useMemo(() => {
+    return getAcademicLevelCurriculum(student.gradeLevel || 'JSS3');
+  }, [student.gradeLevel]);
+
+  // Profile-tailored courses displaying strictly information pertaining to student's profile records
+  const profileCourses = useMemo(() => {
+    if (student.subjects && student.subjects.length > 0) {
+      const enrolled = student.subjects.map(s => s.name.toLowerCase());
+      const matched = courses.filter(c => {
+        const cTitle = c.title.toLowerCase();
+        const cCode = c.code.toLowerCase();
+        return enrolled.some(subj => {
+          if (subj.includes('calculus')) return cTitle.includes('calculus') || cCode.includes('calc');
+          if (subj.includes('math') && !subj.includes('calculus')) {
+            return (cTitle.includes('math') || cCode.includes('math')) && !cTitle.includes('calculus');
+          }
+          if (subj.includes('cyber')) return cTitle.includes('cyber') || cCode.includes('cs');
+          if (subj.includes('computer')) return cTitle.includes('computer') || cTitle.includes('cyber') || cCode.includes('cs');
+          if (subj.includes('creative') || subj.includes('cca') || subj.includes('arts')) return cTitle.includes('cca') || cTitle.includes('creative');
+          if (subj.includes('english') || subj.includes('language')) return cTitle.includes('english') || cCode.includes('eng');
+          if (subj.includes('science')) return cTitle.includes('science') || cCode.includes('sci');
+          return cTitle.includes(subj) || subj.includes(cTitle);
+        });
+      });
+      if (matched.length > 0) return matched;
+    }
+    // Tier-level filtering: keep JSS separate from Senior Calculus
+    if (studentCurriculum.levelTier === 'junior_secondary') {
+      return courses.filter(c => !c.title.toLowerCase().includes('calculus') && !c.code.includes('CALC'));
+    }
+    return courses;
+  }, [courses, student.subjects, studentCurriculum.levelTier]);
+
+  // Profile-tailored assignments
+  const profileAssignments = useMemo(() => {
+    const allowedCourseIds = new Set<string>(profileCourses.map(c => c.id));
+    const allowedTitles = new Set<string>(profileCourses.map(c => c.title.toLowerCase()));
+    return localAssignments.filter(a => 
+      allowedCourseIds.has(a.courseId) || 
+      Array.from(allowedTitles).some((t: string) => a.courseTitle.toLowerCase().includes(t) || t.includes(a.courseTitle.toLowerCase()))
+    );
+  }, [localAssignments, profileCourses]);
+
   // Subject-filtered data views with iconic categorization
   const filteredCourses = selectedSubjectFilter === 'all'
-    ? courses
-    : courses.filter((c) => {
+    ? profileCourses
+    : profileCourses.filter((c) => {
         const iconInfo = getCourseIconInfo(c.title + ' ' + c.code);
         return iconInfo.id.toLowerCase() === selectedSubjectFilter.toLowerCase() ||
                c.title.toLowerCase().includes(selectedSubjectFilter.toLowerCase()) ||
@@ -95,8 +145,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
       });
 
   const filteredAssignments = selectedSubjectFilter === 'all'
-    ? localAssignments
-    : localAssignments.filter((a) => {
+    ? profileAssignments
+    : profileAssignments.filter((a) => {
         const iconInfo = getCourseIconInfo(a.courseTitle);
         return iconInfo.id.toLowerCase() === selectedSubjectFilter.toLowerCase() ||
                a.courseTitle.toLowerCase().includes(selectedSubjectFilter.toLowerCase());
@@ -105,6 +155,29 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const handleOpenPlainTextDoc = (item: any, type: 'course' | 'assignment' | 'topic' | 'quiz' | 'cyber') => {
     const doc = convertToPlainTextDocument(item, type);
     setPlainTextDoc(doc);
+  };
+
+  const handleOpenRecentDocument = (recentDoc: RecentDocumentActivity) => {
+    const fullDoc = EDUCATIONAL_DOCUMENTS.find(d => d.id === recentDoc.id);
+    if (fullDoc) {
+      const formattedContent = `${fullDoc.title}\n${fullDoc.subtitle || ''}\nAuthor: ${fullDoc.author} (${fullDoc.authorTitle || ''})\nGrade Level: ${fullDoc.gradeLevel || ''}\nPublished: ${fullDoc.publishedDate || ''}\n\n` +
+        fullDoc.sections.map(s => `--- ${s.heading} ---\n${s.content}\n${s.callout ? `[${s.callout.title}]: ${s.callout.body}\n` : ''}`).join('\n\n');
+      setPlainTextDoc({
+        title: fullDoc.title,
+        subtitle: `${fullDoc.subjectName} • ${fullDoc.readingTimeMinutes} min read`,
+        content: formattedContent,
+        subjectId: fullDoc.subjectId,
+        docType: fullDoc.category,
+      });
+    } else {
+      setPlainTextDoc({
+        title: recentDoc.title,
+        subtitle: recentDoc.subtitle || recentDoc.subjectName,
+        content: `DOCUMENT: ${recentDoc.title}\nSubject: ${recentDoc.subjectName}\nCategory: ${recentDoc.category || 'Curriculum Reference'}\nOpened At: ${recentDoc.openedAt}\n\nDetailed curriculum content for ${recentDoc.title} is verified and active for ${student.name}.`,
+        subjectId: recentDoc.subjectId,
+        docType: recentDoc.category,
+      });
+    }
   };
 
   const fetchAiExplanationForQuiz = async (qIndex: number, chosenOptionIdx: number) => {
@@ -145,7 +218,19 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
         temperature: 0.4,
       });
 
-      setAiQuizExplanation(res.text || 'Unable to generate AI explanation at this moment.');
+      const responseText = res.text || 'Unable to generate AI explanation at this moment.';
+      setAiQuizExplanation(responseText);
+      saveAIOutputRecord({
+        contextKey: `quiz-diag-${q.id}`,
+        sourceFeature: 'Quiz Diagnostic',
+        subject: student.gradeLevel || 'General',
+        promptSummary: q.question,
+        aiResponse: responseText,
+        modelUsed: 'Gemini Flash + Curriculum Rubric',
+        methodology: `Compared selected option ("${chosenOptionText}") with correct answer ("${correctOptionText}") and syllabus reference.`,
+        groundingSources: ['iLearnit-365 Practice Question Bank', 'Curriculum Reference Explanation'],
+        createdByUser: student.name,
+      });
     } catch (err) {
       console.error('Error getting AI quiz explanation:', err);
       setAiQuizExplanation(
@@ -172,6 +257,18 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
       prompt: `Subject context: ${tutorSubject}.\nStudent question: ${userText}`,
       systemInstruction: systemPrompt,
       temperature: 0.5,
+    });
+
+    saveAIOutputRecord({
+      contextKey: `student-tutor-${tutorSubject.toLowerCase().replace(/\s+/g, '-')}-${tutorMessages.length}`,
+      sourceFeature: 'AI Study Tutor',
+      subject: tutorSubject,
+      promptSummary: userText,
+      aiResponse: result.text,
+      modelUsed: 'Gemini Flash + Subject Syllabus Grounding',
+      methodology: `Applied step-by-step tutoring instruction scoped to ${tutorSubject} for ${student.gradeLevel}.`,
+      groundingSources: [`${tutorSubject} Course Outline`, studentCurriculum.levelTitle],
+      createdByUser: student.name,
     });
 
     setTutorMessages((prev) => [
@@ -239,6 +336,26 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
                 Access PIN: {student.pin || '8842'}
               </span>
             </p>
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => setActiveTab('jss-math')}
+                className="bg-[#0B1D3A] hover:bg-[#132C54] text-white font-sora font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-amber-300" />
+                <span>Start a lesson</span>
+              </button>
+              {onNavigateRole && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateRole('jamb_driller')}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-sora font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>JAMB Driller (2000–2025)</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -280,7 +397,7 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
                 : 'text-blue-700 bg-blue-50/80 hover:bg-blue-100'
             }`}
           >
-            <Calculator className="w-3.5 h-3.5" /> JSS Math Syllabus
+            <Calculator className="w-3.5 h-3.5" /> JSS 1–3 All Subjects
           </button>
           <button
             onClick={() => setActiveTab('cyber-security')}
@@ -398,8 +515,12 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
             <span className="text-xs font-semibold text-[#5B6A88]">Active Subjects</span>
             <BookOpen className="w-4 h-4 text-[#132C54]" />
           </div>
-          <p className="font-sora font-extrabold text-2xl text-[#0B1D3A]">{courses.length}</p>
-          <p className="text-[10px] text-[#132C54] font-semibold mt-1">Spring Term 2026</p>
+          <p className="font-sora font-extrabold text-2xl text-[#0B1D3A]">
+            {student.subjects?.length || profileCourses.length}
+          </p>
+          <p className="text-[10px] text-[#132C54] font-semibold mt-1">
+            {student.gradeLevel} Curriculum Profile
+          </p>
         </div>
       </div>
 
@@ -443,112 +564,304 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Courses Progress (8 cols) */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-sora font-bold text-lg text-[#0B1D3A] flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-[#2F6FE0]" /> Current Course Mastery
+          {/* Academic Level Areas of Learning Banner */}
+          <div className="bg-white border border-[#D8DFEA] dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-700">
+                    {studentCurriculum.levelTitle}
+                  </span>
+                  <span className="text-xs font-mono text-slate-500">
+                    Grade: <strong className="text-slate-800 dark:text-slate-200">{student.gradeLevel}</strong>
+                  </span>
+                </div>
+                <h3 className="font-sora font-bold text-lg sm:text-xl text-[#0B1D3A] dark:text-white mt-1 flex items-center gap-2">
+                  <Compass className="w-5 h-5 text-blue-600" />
+                  Areas of Learning & Profile Syllabus
                 </h3>
-                <button
-                  onClick={() => setActiveTab('courses')}
-                  className="text-xs font-semibold text-[#2F6FE0] hover:underline"
-                >
-                  View Details
-                </button>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-2xl">
+                  Curriculum pathways strictly adapted to your academic tier. Dashboard displays verified information following {student.name}&apos;s profile records.
+                </p>
               </div>
 
-              <div className="space-y-4">
-                {(filteredCourses.length > 0 ? filteredCourses : courses).map((course) => (
-                  <div key={course.id} className="p-4 rounded-2xl bg-[#F6F8FB] border border-[#D8DFEA] hover:border-[#2F6FE0]/40 transition-all">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                      <div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-[#2F6FE0]">
-                          {course.code}
-                        </span>
-                        <h4 className="font-sora font-semibold text-sm text-[#0B1D3A]">{course.title}</h4>
-                        <p className="text-xs text-[#5B6A88]">{course.instructor} • {course.schedule}</p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-sora font-bold px-3 py-1 rounded-full bg-white border border-[#D8DFEA] text-[#0B1D3A]">
-                          Grade: <span className="text-[#2E9B58]">{course.grade}</span>
-                        </span>
-                        <span className="text-xs font-mono font-bold text-[#0B1D3A]">{course.progress}%</span>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full h-2 bg-[#ECF0F6] rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${course.progress}%`, backgroundColor: course.color }}
-                      ></div>
-                    </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-right hidden sm:block">
+                  <span className="text-[10px] font-mono uppercase text-slate-400 font-bold block">Target Examination(s)</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {studentCurriculum.targetExams.map((exam, idx) => (
+                      <span key={idx} className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                        {exam}
+                      </span>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Pending Tasks & AI Launcher (4 cols) */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm space-y-4">
-              <h3 className="font-sora font-bold text-base text-[#0B1D3A] flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[#CC9A2E]" /> Upcoming Assignments
-              </h3>
+            {/* Grid of Learning Areas for this Academic Level */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {studentCurriculum.areas.map((area) => {
+                // Cross-check with student's profile records
+                const profileMatch = student.subjects?.find(s => 
+                  s.name.toLowerCase().includes(area.title.toLowerCase()) || 
+                  area.title.toLowerCase().includes(s.name.toLowerCase()) ||
+                  area.category.toLowerCase().includes(s.name.toLowerCase())
+                );
 
-              <div className="space-y-3">
-                {(filteredAssignments.length > 0 ? filteredAssignments : localAssignments).map((assignment) => (
-                  <div key={assignment.id} className="p-3.5 rounded-2xl bg-[#F6F8FB] border border-[#D8DFEA] space-y-2">
+                return (
+                  <div 
+                    key={area.id}
+                    className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 hover:border-blue-500/40 transition-all space-y-3 group"
+                  >
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-mono text-[#2F6FE0] font-semibold">{assignment.courseTitle}</span>
-                        <h5 className="font-medium text-xs text-[#0B1D3A] leading-snug">{assignment.title}</h5>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl p-2 rounded-xl bg-white dark:bg-slate-800 shadow-xs border border-slate-200/80 dark:border-slate-700">
+                          {area.icon}
+                        </span>
+                        <div>
+                          <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">
+                            {area.subjectCode}
+                          </span>
+                          <h4 className="font-sora font-bold text-sm text-slate-900 dark:text-white leading-tight">
+                            {area.title}
+                          </h4>
+                        </div>
                       </div>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        assignment.status === 'submitted'
-                          ? 'bg-[#2E9B58]/10 text-[#2E9B58]'
-                          : 'bg-[#CC9A2E]/10 text-[#CC9A2E]'
-                      }`}>
-                        {assignment.status === 'submitted' ? 'Submitted' : 'Pending'}
-                      </span>
-                    </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-[#5B6A88] pt-1">
-                      <span>Due: {assignment.dueDate}</span>
-                      {assignment.status === 'pending' && (
-                        <button
-                          onClick={() => markAssignmentDone(assignment.id)}
-                          className="text-[#2E9B58] hover:underline font-semibold text-[11px] cursor-pointer"
-                        >
-                          Mark Complete
-                        </button>
+                      {profileMatch ? (
+                        <span className="bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700 shrink-0">
+                          {profileMatch.score}% ({profileMatch.letter})
+                        </span>
+                      ) : (
+                        <span className="bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-mono px-2 py-0.5 rounded-full shrink-0">
+                          Core Area
+                        </span>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Quick AI Tutor Widget */}
-            <div className="bg-gradient-to-br from-[#132C54] to-[#0B1D3A] rounded-3xl p-6 text-white space-y-4 shadow-lg">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#CC9A2E]" />
-                <h4 className="font-sora font-bold text-sm">Need Homework Help?</h4>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Ask our Gemini-powered AI Tutor to explain complex topics or generate practice problems.
-              </p>
-              <button
-                onClick={() => setActiveTab('ai-tutor')}
-                className="w-full bg-[#2F6FE0] hover:bg-blue-600 text-white font-sora text-xs font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-              >
-                Launch AI Study Tutor <ChevronRight className="w-4 h-4" />
-              </button>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                      {area.category} — Key modules: {area.keyModules.join(', ')}
+                    </p>
+
+                    {/* Competencies */}
+                    <div className="space-y-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                      <span className="text-[10px] font-mono uppercase font-bold text-slate-500 dark:text-slate-400 block">
+                        Core Competencies
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {area.competencies.slice(0, 3).map((comp, idx) => (
+                          <span 
+                            key={idx}
+                            className="text-[10px] bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700"
+                          >
+                            • {comp}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Syllabus Document Opener */}
+                    <div className="pt-2 flex items-center justify-between text-xs">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                        {area.keyModules.length} Modules Registered
+                      </span>
+                      <button
+                        onClick={() => {
+                          const matchingDoc = EDUCATIONAL_DOCUMENTS.find(d => 
+                            (area.recommendedDocId && d.id === area.recommendedDocId) ||
+                            d.subjectId.toLowerCase() === area.id.toLowerCase() ||
+                            d.title.toLowerCase().includes(area.title.toLowerCase())
+                          );
+                          if (matchingDoc) {
+                            handleOpenRecentDocument({
+                              id: matchingDoc.id,
+                              title: matchingDoc.title,
+                              subtitle: matchingDoc.subtitle,
+                              subjectId: matchingDoc.subjectId,
+                              subjectName: matchingDoc.subjectName,
+                              category: matchingDoc.category,
+                              fileType: matchingDoc.fileType,
+                              openedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                              timestamp: Date.now(),
+                              readingTimeMinutes: matchingDoc.readingTimeMinutes,
+                            });
+                          } else {
+                            setPlainTextDoc({
+                              title: `${area.title} Syllabus & Curriculum`,
+                              subtitle: `${studentCurriculum.levelTitle} • ${area.subjectCode}`,
+                              content: `CURRICULUM SPECIFICATION: ${area.title}\nAcademic Level: ${studentCurriculum.levelTitle} (${student.gradeLevel})\nTarget Exams: ${studentCurriculum.targetExams.join(', ')}\n\nCATEGORY:\n${area.category}\n\nCORE COMPETENCIES:\n${area.competencies.map(c => `• ${c}`).join('\n')}\n\nSCHEDULED MODULES:\n${area.keyModules.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n\nThis curriculum record pertains specifically to verified student profile: ${student.name} (${student.studentId || student.id}).`,
+                              subjectId: area.id,
+                              docType: 'Curriculum Specification',
+                            });
+                          }
+                        }}
+                        className="text-blue-600 dark:text-blue-400 font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Open Syllabus</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Courses Progress & Recent Activity (8 cols) */}
+            <div className="lg:col-span-8 space-y-6">
+              <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="font-sora font-bold text-lg text-[#0B1D3A] flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-[#2F6FE0]" /> Current Course Mastery
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Displaying courses pertaining to {student.name}&apos;s profile records.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('courses')}
+                    className="text-xs font-semibold text-[#2F6FE0] hover:underline cursor-pointer"
+                  >
+                    View All Details
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {(filteredCourses.length > 0 ? filteredCourses : profileCourses).map((course) => (
+                    <div key={course.id} className="p-4 rounded-2xl bg-[#F6F8FB] border border-[#D8DFEA] hover:border-[#2F6FE0]/40 transition-all">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                        <div>
+                          <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-[#2F6FE0]">
+                            {course.code}
+                          </span>
+                          <h4 className="font-sora font-semibold text-sm text-[#0B1D3A]">{course.title}</h4>
+                          <p className="text-xs text-[#5B6A88]">{course.instructor} • {course.schedule}</p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-sora font-bold px-3 py-1 rounded-full bg-white border border-[#D8DFEA] text-[#0B1D3A]">
+                            Grade: <span className="text-[#2E9B58]">{course.grade}</span>
+                          </span>
+                          <span className="text-xs font-mono font-bold text-[#0B1D3A]">{course.progress}%</span>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="w-full h-2 bg-[#ECF0F6] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${course.progress}%`, backgroundColor: course.color }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* RECENT ACTIVITY WIDGET: Last 5 documents opened by the user with hover scale/shadow transitions */}
+              <RecentActivityWidget
+                userId={student.id || student.studentId || 'st-101'}
+                studentGradeLevel={student.gradeLevel}
+                onOpenDocument={handleOpenRecentDocument}
+              />
+            </div>
+
+            {/* Pending Tasks, Profile Records & AI Launcher (4 cols) */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-sora font-bold text-base text-[#0B1D3A] flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#CC9A2E]" /> Upcoming Assignments
+                  </h3>
+                  <span className="text-[11px] font-mono text-slate-500">
+                    {filteredAssignments.length} Pending
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {(filteredAssignments.length > 0 ? filteredAssignments : profileAssignments).map((assignment) => (
+                    <div key={assignment.id} className="p-3.5 rounded-2xl bg-[#F6F8FB] border border-[#D8DFEA] space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-mono text-[#2F6FE0] font-semibold">{assignment.courseTitle}</span>
+                          <h5 className="font-medium text-xs text-[#0B1D3A] leading-snug">{assignment.title}</h5>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          assignment.status === 'submitted'
+                            ? 'bg-[#2E9B58]/10 text-[#2E9B58]'
+                            : 'bg-[#CC9A2E]/10 text-[#CC9A2E]'
+                        }`}>
+                          {assignment.status === 'submitted' ? 'Submitted' : 'Pending'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-[#5B6A88] pt-1">
+                        <span>Due: {assignment.dueDate}</span>
+                        {assignment.status === 'pending' && (
+                          <button
+                            onClick={() => markAssignmentDone(assignment.id)}
+                            className="text-[#2E9B58] hover:underline font-semibold text-[11px] cursor-pointer"
+                          >
+                            Mark Complete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Student Profile Records Card: Verified Enrolled Subjects */}
+              {student.subjects && student.subjects.length > 0 && (
+                <div className="bg-white border border-[#D8DFEA] rounded-3xl p-6 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-sora font-bold text-sm text-[#0B1D3A] flex items-center gap-2">
+                      <Award className="w-4 h-4 text-emerald-600" /> Profile Subject Records
+                    </h4>
+                    <span className="text-[10px] font-mono bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                      Verified
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Official scores and evaluations registered to {student.name}&apos;s profile:
+                  </p>
+                  <div className="space-y-2 pt-1">
+                    {student.subjects.map((sub, idx) => (
+                      <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-sora font-semibold text-slate-800">{sub.name}</p>
+                          <p className="text-[10px] text-slate-500">{sub.teacher || 'Assigned Instructor'}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-slate-900">{sub.score}%</span>
+                          <span className="ml-1 text-[10px] font-mono font-bold text-emerald-600">({sub.letter})</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick AI Tutor Widget */}
+              <div className="bg-gradient-to-br from-[#132C54] to-[#0B1D3A] rounded-3xl p-6 text-white space-y-4 shadow-lg">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-[#CC9A2E]" />
+                  <h4 className="font-sora font-bold text-sm">Need Homework Help?</h4>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Ask our Gemini-powered AI Tutor to explain complex topics or generate practice problems for {studentCurriculum.levelTitle}.
+                </p>
+                <button
+                  onClick={() => setActiveTab('ai-tutor')}
+                  className="w-full bg-[#2F6FE0] hover:bg-blue-600 text-white font-sora text-xs font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                >
+                  Launch AI Study Tutor <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -568,9 +881,17 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
         />
       )}
 
-      {/* TAB CONTENT: JSS MATH */}
+      {/* TAB CONTENT: JSS 1-3 ALL SUBJECTS */}
       {activeTab === 'jss-math' && (
-        <JSSMathExplorer />
+        <JSSAllSubjectsExplorer
+          defaultLevel={
+            student.gradeLevel?.toUpperCase().includes('JSS1') || student.gradeLevel?.toUpperCase().includes('JSS 1')
+              ? 'JSS1'
+              : student.gradeLevel?.toUpperCase().includes('JSS2') || student.gradeLevel?.toUpperCase().includes('JSS 2')
+              ? 'JSS2'
+              : 'JSS3'
+          }
+        />
       )}
 
       {/* TAB CONTENT: CYBERSECURITY ACADEMY & ASSESSMENTS */}
@@ -832,8 +1153,21 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
                     <span>Gemini AI is examining your choice, identifying any misconceptions, and generating step-by-step guidance...</span>
                   </div>
                 ) : aiQuizExplanation ? (
-                  <div className="leading-relaxed text-xs sm:text-sm font-medium text-slate-800 bg-white/90 p-4 rounded-xl border border-amber-200/80 whitespace-pre-wrap shadow-2xs">
-                    {aiQuizExplanation}
+                  <div className="space-y-2">
+                    <div className="leading-relaxed text-xs sm:text-sm font-medium text-slate-800 bg-white/90 p-4 rounded-xl border border-amber-200/80 whitespace-pre-wrap shadow-2xs">
+                      {aiQuizExplanation}
+                    </div>
+                    <AITransparencyPanel
+                      contextKey={`quiz-diag-${quizQuestions[quizIndex].id}`}
+                      sourceFeature="Quiz Diagnostic"
+                      subject={student.gradeLevel || 'General'}
+                      promptSummary={quizQuestions[quizIndex].question}
+                      aiResponse={aiQuizExplanation}
+                      methodology="Evaluated student selection against curriculum rubric and step-by-step worked solution."
+                      groundingSources={['iLearnit-365 Question Bank', 'Curriculum Reference Explanation']}
+                      createdByUser={student.name}
+                      compact
+                    />
                   </div>
                 ) : null}
 
@@ -993,6 +1327,19 @@ Keep the response clear, encouraging, direct, and under 4 concise sentences.`;
                   }`}
                 >
                   {msg.text}
+                  {msg.sender === 'ai' && i > 0 && (
+                    <AITransparencyPanel
+                      contextKey={`student-tutor-${tutorSubject.toLowerCase().replace(/\s+/g, '-')}-${i - 1}`}
+                      sourceFeature="AI Study Tutor"
+                      subject={tutorSubject}
+                      promptSummary={tutorMessages[i - 1]?.text || `Study help in ${tutorSubject}`}
+                      aiResponse={msg.text}
+                      methodology={`Generated step-by-step explanation tailored to ${tutorSubject} (${student.gradeLevel}).`}
+                      groundingSources={[`${tutorSubject} Syllabus`, studentCurriculum.levelTitle]}
+                      createdByUser={student.name}
+                      compact
+                    />
+                  )}
                 </div>
                 <span className="text-[10px] text-[#7A8AA8] mt-1 px-1">{msg.time}</span>
               </div>

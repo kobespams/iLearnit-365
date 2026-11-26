@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserRole, StudentDetail } from '../types';
+import { UserRole, StudentDetail, RegisteredUser } from '../types';
 import { 
   GraduationCap, 
   BookOpen, 
@@ -13,15 +13,21 @@ import {
   LogIn,
   Lock,
   Mail,
-  BookMarked,
-  Sparkles
+  Sparkles,
+  Palette,
+  Sun,
+  Moon,
+  Zap,
+  Award
 } from 'lucide-react';
 import { 
   authenticateByPin, 
   authenticateByEmail, 
   userToStudentDetail,
-  getRegisteredUsers 
+  getRegisteredUsers,
+  getRegisteredStudents 
 } from '../services/authStorage';
+import { THEME_OPTIONS, applyTheme, getInitialTheme, ThemeMode } from '../utils/theme';
 
 interface LoginPageProps {
   onLoginSuccess: (role: UserRole, student: StudentDetail) => void;
@@ -35,18 +41,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   onNavigateToRegister
 }) => {
   const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'parent'>('student');
-  const [loginMethod, setLoginMethod] = useState<'pin' | 'email'>('pin');
+  const [loginMethod, setLoginMethod] = useState<'pin' | 'quick_select' | 'email'>('pin');
 
-  // Sign In States (NO hardcoded sample PINs prefilled)
+  // Sign In Inputs
   const [pinInput, setPinInput] = useState<string>('');
   const [emailInput, setEmailInput] = useState<string>('');
   const [passwordInput, setPasswordInput] = useState<string>('');
 
+  // Active theme selector state
+  const [currentTheme, setCurrentTheme] = useState<ThemeMode>(() => getInitialTheme());
+
   // UI Feedback States
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Live lookup for student PIN during sign in against REAL registered users
-  const matchedStudent = pinInput.length >= 4 ? authenticateByPin(pinInput) : undefined;
+  // Real registered users list
+  const registeredUsers = getRegisteredUsers();
+  const registeredStudents = getRegisteredStudents();
+
+  // Matched student when typing 4-digit PIN
+  const matchedUser = pinInput.length >= 4 ? authenticateByPin(pinInput) : undefined;
+
+  const handleThemeChange = (themeMode: ThemeMode) => {
+    setCurrentTheme(themeMode);
+    applyTheme(themeMode);
+  };
 
   const handleSignInSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,16 +76,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         return;
       }
 
-      const matchedUser = authenticateByPin(pinInput);
-      if (!matchedUser) {
-        setErrorMessage(`No registered account found with PIN "${pinInput}". Please check your PIN or click "Register New Account" to generate your unique PIN.`);
+      const user = authenticateByPin(pinInput);
+      if (!user) {
+        setErrorMessage(`No registered account found for PIN "${pinInput}". Please check your PIN or click "Register New Account" to generate your unique PIN.`);
         return;
       }
 
-      const studentDetail = userToStudentDetail(matchedUser);
-      onLoginSuccess(matchedUser.role, studentDetail);
-    } else {
-      // Email & Password method
+      const studentDetail = userToStudentDetail(user);
+      onLoginSuccess(user.role, studentDetail);
+    } else if (loginMethod === 'email') {
       if (!emailInput.trim()) {
         setErrorMessage('Please enter your registered email address.');
         return;
@@ -77,51 +94,45 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         return;
       }
 
-      const matchedUser = authenticateByEmail(emailInput, selectedRole);
-      if (!matchedUser) {
+      const user = authenticateByEmail(emailInput, selectedRole);
+      if (!user) {
         setErrorMessage(`No account found for "${emailInput}" under the ${selectedRole} role. Please check your credentials or register a new profile.`);
         return;
       }
 
-      const studentDetail = userToStudentDetail(matchedUser);
-      onLoginSuccess(matchedUser.role, studentDetail);
+      const studentDetail = userToStudentDetail(user);
+      onLoginSuccess(user.role, studentDetail);
     }
   };
 
+  const handleQuickSelectUser = (user: RegisteredUser) => {
+    const studentDetail = userToStudentDetail(user);
+    onLoginSuccess(user.role, studentDetail);
+  };
+
   return (
-    <div className="min-h-[calc(100vh-80px)] py-10 px-4 sm:px-6 lg:px-8 flex items-center justify-center relative z-10">
-      <div className="max-w-4xl w-full bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-12 relative">
+    <div className="min-h-[calc(100vh-80px)] py-10 px-4 sm:px-6 lg:px-8 flex items-center justify-center relative z-10 animate-fadeIn">
+      <div className="max-w-5xl w-full bg-white dark:bg-slate-900 border border-[#D8DFEA] dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 relative transition-colors duration-300">
         
-        {/* Left Decorative Column */}
-        <div className="md:col-span-5 bg-gradient-to-br from-navy-deep via-navy to-slate-900 text-white p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
+        {/* Left Decorative eLearning Branding Column */}
+        <div className="lg:col-span-5 bg-gradient-to-br from-[#0B1D3A] via-[#132C54] to-slate-950 text-white p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-gold/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 space-y-6">
-            {/* Dark Digital Animation Container for iLearnit Logo */}
+            {/* Logo Container with Cyber Scanline FX */}
             <div className="flex items-center gap-4">
               <div className="relative group">
-                {/* Ambient Neon Glow Halo */}
                 <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/40 via-blue-600/30 to-amber-500/40 rounded-2xl blur-lg opacity-80 group-hover:opacity-100 transition duration-500 animate-pulse-glow pointer-events-none" />
                 
-                {/* Digital Container with Scanline & Cyber Brackets */}
-                <div className="cyber-logo-container relative w-16 h-16 sm:w-18 sm:h-18 rounded-2xl shadow-xl p-1 transition-transform duration-300 group-hover:scale-105">
-                  {/* Scanline Sweep Overlay */}
+                <div className="cyber-logo-container relative w-16 h-16 rounded-2xl shadow-xl p-1 transition-transform duration-300 group-hover:scale-105">
                   <div className="cyber-scanline" />
-
-                  {/* Corner Tech Brackets */}
-                  <div className="absolute top-0.5 left-0.5 w-2 h-2 border-t-2 border-l-2 border-cyan-400 z-20 pointer-events-none" />
-                  <div className="absolute top-0.5 right-0.5 w-2 h-2 border-t-2 border-r-2 border-cyan-400 z-20 pointer-events-none" />
-                  <div className="absolute bottom-0.5 left-0.5 w-2 h-2 border-b-2 border-l-2 border-amber-400 z-20 pointer-events-none" />
-                  <div className="absolute bottom-0.5 right-0.5 w-2 h-2 border-b-2 border-r-2 border-amber-400 z-20 pointer-events-none" />
-
                   <img
                     src="/src/assets/images/ilearnit_logo_1786816502338.jpg"
                     alt="iLearnit-365 Logo"
                     referrerPolicy="no-referrer"
                     className="relative z-10 w-full h-full object-cover rounded-xl"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none z-10" />
                 </div>
               </div>
 
@@ -134,266 +145,296 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </div>
                 <div className="text-[9px] font-mono text-slate-400 mt-0.5 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Cloud Education Gateway</span>
+                  <span>Cloud Academic Gateway</span>
                 </div>
               </div>
             </div>
 
             <div className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-300 border border-blue-400/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider font-mono">
-              <ShieldCheck className="w-3.5 h-3.5 text-gold" /> Registered Access Gate
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span>Registered Scholar Authentication</span>
             </div>
 
             <div>
-              <h2 className="text-3xl font-extrabold font-sora text-white leading-tight">
-                Sign In to iLearnit-365
+              <h2 className="text-2xl sm:text-3xl font-extrabold font-sora text-white leading-tight">
+                eLearning Dashboard Gateway
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                Course outlines, JSS math syllabus, CBT exam suite, homework assignments, and AI tutors require verified student or faculty authentication.
+                Access your personalized study schedule, E2EE educator channels, live JSS math syllabi, CBT exams, and real-time academic transcripts.
               </p>
             </div>
 
-            {/* Feature Highlights */}
-            <div className="space-y-3 pt-2 text-xs">
-              <div className="flex items-center gap-2 text-slate-200 font-medium">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Protected Course Outlines & Syllabi</span>
+            {/* Live Theme Switcher Showcase inside Sign-in */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-4 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-mono text-slate-300">
+                <span className="flex items-center gap-1.5 text-amber-300 font-bold">
+                  <Palette className="w-3.5 h-3.5" /> Dynamic Visual Theme:
+                </span>
+                <span className="capitalize text-[11px]">{currentTheme.replace('_', ' ')}</span>
               </div>
-              <div className="flex items-center gap-2 text-slate-200 font-medium">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Real-Time Encrypted Student PIN Access</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-200 font-medium">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Diagnostic Study Tools & AI Assistant</span>
+
+              <div className="grid grid-cols-5 gap-1.5">
+                {THEME_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => handleThemeChange(opt.id)}
+                    title={`${opt.name} - ${opt.subtitle}`}
+                    className={`p-1.5 rounded-xl border flex flex-col items-center gap-1 transition cursor-pointer ${
+                      currentTheme === opt.id
+                        ? 'bg-white text-[#0B1D3A] border-white shadow-md font-bold'
+                        : 'bg-black/30 text-slate-300 border-white/10 hover:bg-white/20'
+                    }`}
+                  >
+                    <div className="flex gap-0.5">
+                      {opt.previewColors.slice(0, 2).map((c, i) => (
+                        <span key={i} className="w-2 h-2 rounded-full" style={{ backgroundColor: c }} />
+                      ))}
+                    </div>
+                    <span className="text-[9px] truncate max-w-full font-mono">{opt.name.split(' ')[0]}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Registration Prompt Callout */}
-          <div className="relative z-10 pt-6 border-t border-slate-800 space-y-3">
-            <div className="text-xs text-slate-300">
-              <span className="text-gold font-bold">New to iLearnit-365?</span>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                Register now to have a secure real-time 4-digit PIN generated for your profile.
-              </p>
-            </div>
-            
-            {onNavigateToRegister && (
-              <button
-                type="button"
-                onClick={onNavigateToRegister}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 text-white font-sora font-bold text-xs py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-md cursor-pointer"
-              >
-                <UserPlus className="w-3.5 h-3.5 text-gold" />
-                <span>Register & Generate Real-Time PIN</span>
-              </button>
-            )}
+          <div className="relative z-10 pt-6 text-[10px] text-slate-400 font-mono flex items-center justify-between border-t border-white/10">
+            <span>AES-256 Protocol Verified</span>
+            <span>iLearnit-365 v2.4</span>
           </div>
         </div>
 
         {/* Right Form Column */}
-        <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-between space-y-6 bg-white">
-          <div className="space-y-6">
-            
-            {/* Top Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <span className="text-xs font-bold text-blue-600 uppercase tracking-widest font-mono">
-                  Authentication
-                </span>
-                <h3 className="text-2xl font-bold font-sora text-navy">
-                  Account Portal Log In
-                </h3>
-              </div>
-
-              {/* Login Method Toggle */}
-              <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginMethod('pin');
-                    setErrorMessage(null);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                    loginMethod === 'pin'
-                      ? 'bg-navy text-white shadow-sm'
-                      : 'text-slate-600 hover:text-navy'
-                  }`}
-                >
-                  <KeyRound className="w-3.5 h-3.5" /> PIN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginMethod('email');
-                    setErrorMessage(null);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                    loginMethod === 'email'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-navy'
-                  }`}
-                >
-                  <Mail className="w-3.5 h-3.5" /> Email
-                </button>
-              </div>
+        <div className="lg:col-span-7 p-6 sm:p-10 space-y-6">
+          {/* Top Login Method Switcher */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#ECF0F6] dark:border-slate-800 pb-4">
+            <div>
+              <h3 className="font-sora font-bold text-xl text-[#0B1D3A] dark:text-white">
+                Sign In to Your Portal
+              </h3>
+              <p className="text-xs text-[#5B6A88] dark:text-slate-400 mt-0.5">
+                Select your preferred authentication method below
+              </p>
             </div>
 
-            {/* Role Selector */}
-            <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-1 bg-[#ECF0F6] dark:bg-slate-800 p-1 rounded-xl border border-[#D8DFEA] dark:border-slate-700">
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedRole('student');
-                  setErrorMessage(null);
-                }}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                  selectedRole === 'student'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-600 hover:text-navy hover:bg-white/60'
+                onClick={() => setLoginMethod('pin')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  loginMethod === 'pin'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-[#5B6A88] dark:text-slate-300 hover:text-[#0B1D3A]'
                 }`}
               >
-                <GraduationCap className="w-4 h-4" />
-                <span>Student</span>
+                4-Digit PIN
               </button>
-
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedRole('parent');
-                  setErrorMessage(null);
-                }}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                  selectedRole === 'parent'
-                    ? 'bg-amber-600 text-white shadow-md'
-                    : 'text-slate-600 hover:text-navy hover:bg-white/60'
+                onClick={() => setLoginMethod('quick_select')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  loginMethod === 'quick_select'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-[#5B6A88] dark:text-slate-300 hover:text-[#0B1D3A]'
                 }`}
               >
-                <Users className="w-4 h-4" />
-                <span>Parent</span>
+                Registered Profiles ({registeredUsers.length})
               </button>
-
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedRole('teacher');
-                  setErrorMessage(null);
-                }}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                  selectedRole === 'teacher'
-                    ? 'bg-emerald-600 text-white shadow-md'
-                    : 'text-slate-600 hover:text-navy hover:bg-white/60'
+                onClick={() => setLoginMethod('email')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  loginMethod === 'email'
+                    ? 'bg-[#0B1D3A] dark:bg-slate-700 text-white shadow-sm'
+                    : 'text-[#5B6A88] dark:text-slate-300 hover:text-[#0B1D3A]'
                 }`}
               >
-                <BookMarked className="w-4 h-4" />
-                <span>Teacher</span>
+                Email
               </button>
             </div>
+          </div>
 
-            {/* SIGN IN FORM */}
-            <form onSubmit={handleSignInSubmit} className="space-y-4">
-              {loginMethod === 'pin' ? (
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <KeyRound className="w-3.5 h-3.5 text-blue-600" /> Enter 4-Digit Student / User PIN
-                    </label>
-                  </div>
+          {errorMessage && (
+            <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded-2xl p-4 text-xs text-red-700 dark:text-red-300 flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
+              <div>{errorMessage}</div>
+            </div>
+          )}
 
-                  <div className="relative">
-                    <input
-                      type="text"
-                      maxLength={12}
-                      value={pinInput}
-                      onChange={(e) => {
-                        setPinInput(e.target.value);
-                        setErrorMessage(null);
-                      }}
-                      placeholder="Enter your registered 4-digit PIN..."
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono font-bold text-navy focus:outline-none focus:ring-2 focus:ring-blue-500 tracking-wider"
-                    />
-                    {matchedStudent && (
-                      <div className="absolute right-3 top-2.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1">
-                        <Check className="w-3 h-3 text-emerald-600" /> Verified: {matchedStudent.name}
+          {/* METHOD 1: 4-DIGIT PIN SIGN IN */}
+          {loginMethod === 'pin' && (
+            <form onSubmit={handleSignInSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-xs font-mono font-bold text-[#0B1D3A] dark:text-slate-200 uppercase tracking-wider">
+                  Enter 4-Digit Access PIN
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-5 h-5 text-[#5B6A88] dark:text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    maxLength={4}
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                    placeholder="e.g. 8842"
+                    className="w-full bg-[#F6F8FB] dark:bg-slate-950 border-2 border-[#D8DFEA] dark:border-slate-800 focus:border-blue-600 rounded-2xl pl-12 pr-4 py-3.5 text-xl font-mono font-extrabold tracking-widest text-[#0B1D3A] dark:text-white focus:outline-none transition"
+                  />
+                </div>
+                <p className="text-[11px] text-[#5B6A88] dark:text-slate-400">
+                  Provided during student registration or assigned by your institutional registrar.
+                </p>
+              </div>
+
+              {/* Real-time matched profile preview card */}
+              {matchedUser && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-800/90 border border-emerald-300 dark:border-emerald-700 rounded-2xl p-4 flex items-center justify-between gap-4 animate-fadeIn">
+                  <div className="flex items-center gap-3">
+                    <img src={matchedUser.avatar} alt="" className="w-10 h-10 rounded-xl object-cover border border-emerald-400" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-sora font-bold text-sm text-[#0B1D3A] dark:text-white">{matchedUser.name}</span>
+                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded">
+                          {matchedUser.role.toUpperCase()}
+                        </span>
                       </div>
-                    )}
+                      <p className="text-[11px] text-[#5B6A88] dark:text-slate-300">{matchedUser.gradeLevel || matchedUser.email}</p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1.5">
-                    Enter the real-time PIN issued upon completing registration.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1">
-                      Registered Email Address
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={emailInput}
-                      onChange={(e) => setEmailInput(e.target.value)}
-                      placeholder="user@ilearnit365.edu"
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-xs font-medium text-navy focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1">
-                      Account Password
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-xs font-medium text-navy focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {errorMessage && (
-                <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-xl text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                  <span>{errorMessage}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickSelectUser(matchedUser)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer shadow-sm shrink-0"
+                  >
+                    Confirm & Enter →
+                  </button>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="w-full bg-navy hover:bg-slate-900 text-white font-sora font-extrabold text-xs sm:text-sm py-3.5 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full bg-[#0B1D3A] hover:bg-[#132C54] dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-sora font-bold text-sm py-4 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer shadow-lg"
               >
-                <LogIn className="w-4 h-4 text-gold" />
-                <span>Launch Registered Dashboard</span>
+                <LogIn className="w-4 h-4" />
+                <span>Verify PIN & Sign In</span>
               </button>
             </form>
+          )}
 
-          </div>
+          {/* METHOD 2: QUICK SELECT FROM REAL REGISTERED PROFILES */}
+          {loginMethod === 'quick_select' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-[#5B6A88] dark:text-slate-400 uppercase">
+                  Real Registered Users on This App
+                </span>
+                <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  {registeredUsers.length} Active Records
+                </span>
+              </div>
 
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            {onNavigateToRegister ? (
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                {registeredUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    onClick={() => handleQuickSelectUser(user)}
+                    className="bg-[#F6F8FB] dark:bg-slate-800/70 hover:bg-blue-50 dark:hover:bg-slate-800 border border-[#D8DFEA] dark:border-slate-700 hover:border-blue-400 rounded-2xl p-4 flex items-center justify-between gap-4 transition cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <img src={user.avatar} alt="" className="w-11 h-11 rounded-2xl object-cover border border-slate-300 dark:border-slate-600" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-sora font-bold text-sm text-[#0B1D3A] dark:text-white group-hover:text-blue-600">
+                            {user.name}
+                          </h4>
+                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                            user.role === 'teacher'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                          }`}>
+                            {user.role === 'teacher' ? 'Faculty' : 'Student'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#5B6A88] dark:text-slate-400 mt-0.5">
+                          {user.gradeLevel || user.schoolName} • ID: <span className="font-mono text-[#0B1D3A] dark:text-slate-300 font-semibold">{user.studentId}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-[11px] font-mono font-bold bg-white dark:bg-slate-900 border border-[#D8DFEA] dark:border-slate-700 text-[#0B1D3A] dark:text-slate-200 px-2.5 py-1 rounded-xl">
+                        PIN: {user.pin}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* METHOD 3: EMAIL & PASSWORD */}
+          {loginMethod === 'email' && (
+            <form onSubmit={handleSignInSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-mono font-bold text-[#0B1D3A] dark:text-slate-200 uppercase">
+                  Institutional Email
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-[#5B6A88] dark:text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    placeholder="e.g. samuel.adebayo@ilearnit365.edu"
+                    className="w-full bg-[#F6F8FB] dark:bg-slate-950 border border-[#D8DFEA] dark:border-slate-800 rounded-2xl pl-11 pr-4 py-3 text-xs sm:text-sm text-[#0B1D3A] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-mono font-bold text-[#0B1D3A] dark:text-slate-200 uppercase">
+                  Password / Passphrase
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-[#5B6A88] dark:text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full bg-[#F6F8FB] dark:bg-slate-950 border border-[#D8DFEA] dark:border-slate-800 rounded-2xl pl-11 pr-4 py-3 text-xs sm:text-sm text-[#0B1D3A] dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
               <button
-                type="button"
-                onClick={onNavigateToRegister}
-                className="text-blue-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                type="submit"
+                className="w-full bg-[#0B1D3A] hover:bg-[#132C54] dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-sora font-bold text-sm py-3.5 rounded-2xl transition cursor-pointer shadow-md mt-2"
               >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Create New Account</span>
+                Sign In with Credentials
               </button>
-            ) : <span />}
-            
+            </form>
+          )}
+
+          {/* Bottom Action Footer */}
+          <div className="border-t border-[#ECF0F6] dark:border-slate-800 pt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <button
               type="button"
               onClick={onNavigateToHub}
-              className="text-slate-600 hover:text-navy cursor-pointer"
+              className="text-xs text-[#5B6A88] dark:text-slate-400 hover:text-[#0B1D3A] dark:hover:text-white transition cursor-pointer"
             >
-              iLearnit-365 Homepage
+              ← Back to Main Hub
             </button>
+
+            {onNavigateToRegister && (
+              <button
+                type="button"
+                onClick={onNavigateToRegister}
+                className="inline-flex items-center gap-1.5 text-xs font-sora font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Register New Student Account & PIN →</span>
+              </button>
+            )}
           </div>
         </div>
-
       </div>
     </div>
   );

@@ -2,9 +2,21 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   GraduationCap, Search, Plus, X, Send, FileText, ShieldCheck,
   Mail, Download, Check, Clock, ChevronRight, Sparkles, KeyRound,
-  ArrowLeft, Users, RefreshCw
+  ArrowLeft, Users, RefreshCw, Lock, Eye, EyeOff, AlertCircle, ExternalLink
 } from "lucide-react";
 import { UserRole } from "../types";
+import { AdminAuditTrailView } from "./AdminAuditTrailView";
+import { recordAuditAction } from "../services/auditTrailService";
+import {
+  getActiveDeveloperSession,
+  verifyDeveloperCredentials,
+  revokeDeveloperSession,
+  maskPin,
+  maskEmail,
+  maskName,
+  AUTHORIZED_DEVELOPERS,
+  DeveloperSession
+} from "../services/developerPrivacyService";
 
 const FONT_LINK_ID = "ilearnit-fonts";
 
@@ -167,9 +179,10 @@ function downloadText(filename: string, text: string) {
 
 interface AdminDashboardProps {
   onNavigateRole?: (role: UserRole) => void;
+  isStandaloneMode?: boolean;
 }
 
-export default function AdminDashboard({ onNavigateRole }: AdminDashboardProps = {}) {
+export default function AdminDashboard({ onNavigateRole, isStandaloneMode = false }: AdminDashboardProps = {}) {
   const [students, setStudents] = useState<StudentRegistrationRecord[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState("");
@@ -182,6 +195,74 @@ export default function AdminDashboard({ onNavigateRole }: AdminDashboardProps =
     course: Object.keys(COURSES)[0],
     subject: COURSES[Object.keys(COURSES)[0]][0]
   });
+
+  // Admin Dashboard Tabs: Registrations vs Audit Trail
+  const [activeAdminTab, setActiveAdminTab] = useState<'registrations' | 'audit_trail'>('registrations');
+
+  // Developer Privacy Protocol states
+  const [devSession, setDevSession] = useState<DeveloperSession | null>(getActiveDeveloperSession());
+  const [devKeyInput, setDevKeyInput] = useState("");
+  const [selectedDevId, setSelectedDevId] = useState(AUTHORIZED_DEVELOPERS[0].developerId);
+  const [devAuthError, setDevAuthError] = useState<string | null>(null);
+  const [unmaskData, setUnmaskData] = useState(false);
+  const [showDevAuthModal, setShowDevAuthModal] = useState(false);
+
+  function handleDevAuth(e: React.FormEvent) {
+    e.preventDefault();
+    setDevAuthError(null);
+    const res = verifyDeveloperCredentials(selectedDevId, devKeyInput);
+    if (res.success && res.session) {
+      setDevSession(res.session);
+      setDevKeyInput("");
+      setUnmaskData(true);
+      setShowDevAuthModal(false);
+      showToast(res.message, "ok");
+
+      recordAuditAction({
+        category: 'PII_ACCESS',
+        action: 'Developer Privacy Authorization Granted',
+        actorId: res.session.developerId,
+        actorName: res.session.developerName,
+        actorRole: res.session.role,
+        targetResource: 'Student Registration Master Database',
+        status: 'SUCCESS',
+        clearanceLevel: 'NDPR Privacy Tier 1',
+        details: `Decrypted masked registration PINs & emails. Token signature: ${res.session.authToken.substring(0, 16)}...`,
+      });
+    } else {
+      setDevAuthError(res.message);
+      recordAuditAction({
+        category: 'PII_ACCESS',
+        action: 'Developer Authorization Failed',
+        actorId: selectedDevId,
+        actorName: 'Unknown / Denied',
+        actorRole: 'UNAUTHORIZED_ATTEMPT',
+        targetResource: 'Student Registration Master Database',
+        status: 'DENIED',
+        details: `Invalid passkey entered for developer ID: ${selectedDevId}. Clearance denied.`,
+      });
+    }
+  }
+
+  function handleDevLock() {
+    if (devSession) {
+      recordAuditAction({
+        category: 'PII_ACCESS',
+        action: 'Developer Privacy Session Locked',
+        actorId: devSession.developerId,
+        actorName: devSession.developerName,
+        actorRole: devSession.roleTitle,
+        targetResource: 'Student Registration Master Database',
+        status: 'INFO',
+        clearanceLevel: 'NDPR Vault Locked',
+        details: `Vault closed. PII re-masked under privacy protocols.`,
+      });
+    }
+    revokeDeveloperSession();
+    setDevSession(null);
+    setUnmaskData(false);
+    showToast("Developer session closed. Master Vault re-locked.", "ok");
+  }
 
   useEffect(() => {
     if (!document.getElementById(FONT_LINK_ID)) {
@@ -265,13 +346,40 @@ export default function AdminDashboard({ onNavigateRole }: AdminDashboardProps =
     setForm({ name: "", email: "", course: Object.keys(COURSES)[0], subject: COURSES[Object.keys(COURSES)[0]][0] });
     setActiveId(newStudent.id);
     showToast(`Registration created for ${newStudent.name}`);
+
+    recordAuditAction({
+      category: 'STUDENT_REGISTRATION',
+      action: `Created Student Registration: ${newStudent.name}`,
+      actorId: devSession ? devSession.developerId : 'ADM-REGISTRAR-LIVE',
+      actorName: devSession ? devSession.developerName : 'Institutional Registrar',
+      actorRole: 'Academic Operations',
+      targetResource: `Reg: ${newStudent.regNumber} (${newStudent.course})`,
+      status: 'SUCCESS',
+      clearanceLevel: 'LEVEL_2_REGISTRAR',
+      details: `Generated registration ${newStudent.regNumber} for ${newStudent.name} (${newStudent.email}) enrolled in ${newStudent.subject}.`,
+    });
   }
 
   function markSent(id: string) {
+    const target = students.find(s => s.id === id);
     const next = students.map((s) =>
       s.id === id ? { ...s, feedbackSent: true, sentAt: new Date().toISOString() } : s
     );
     persist(next);
+
+    if (target) {
+      recordAuditAction({
+        category: 'FEEDBACK_DISPATCH',
+        action: `Orientation Feedback Sent to ${target.name}`,
+        actorId: devSession ? devSession.developerId : 'ADM-REGISTRAR-LIVE',
+        actorName: devSession ? devSession.developerName : 'Institutional Registrar',
+        actorRole: 'Academic Operations',
+        targetResource: `Student: ${target.regNumber}`,
+        status: 'SUCCESS',
+        clearanceLevel: 'LEVEL_2_REGISTRAR',
+        details: `Dispatched orientation credentials and verification letter to ${target.email}.`,
+      });
+    }
   }
 
   const filtered = useMemo(() => {
@@ -316,10 +424,65 @@ export default function AdminDashboard({ onNavigateRole }: AdminDashboardProps =
           </button>
         )}
 
-        <div style={styles.navSection}>Registrar</div>
-        <div style={{ ...styles.navItem, ...styles.navItemActive }}>
-          <FileText size={16} /> Registrations
-        </div>
+        <div style={styles.navSection}>Administration &amp; Logs</div>
+        <button
+          onClick={() => setActiveAdminTab('registrations')}
+          style={{
+            ...styles.navItem,
+            ...(activeAdminTab === 'registrations' ? styles.navItemActive : {}),
+            background: activeAdminTab === 'registrations' ? "#7C5CFC" : "transparent",
+            color: activeAdminTab === 'registrations' ? "#FFFFFF" : "#DDD6FE",
+            width: "100%",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 12px",
+            borderRadius: 8,
+            fontWeight: activeAdminTab === 'registrations' ? 700 : 500,
+          }}
+        >
+          <FileText size={16} /> Student Registrations
+        </button>
+
+        <button
+          onClick={() => setActiveAdminTab('audit_trail')}
+          style={{
+            ...styles.navItem,
+            ...(activeAdminTab === 'audit_trail' ? styles.navItemActive : {}),
+            marginTop: 4,
+            background: activeAdminTab === 'audit_trail' ? "linear-gradient(135deg, #10B981, #059669)" : "rgba(16, 185, 129, 0.1)",
+            border: activeAdminTab === 'audit_trail' ? "1px solid #34D399" : "1px solid rgba(16, 185, 129, 0.25)",
+            color: activeAdminTab === 'audit_trail' ? "#FFFFFF" : "#6EE7B7",
+            width: "100%",
+            cursor: "pointer",
+            textAlign: "left",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "8px 12px",
+            borderRadius: 8,
+            fontWeight: 700,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ShieldCheck size={16} color={activeAdminTab === 'audit_trail' ? "#FFFFFF" : "#34D399"} />
+            <span>Audit Trail &amp; Logs</span>
+          </div>
+          <span style={{
+            fontSize: 9,
+            background: activeAdminTab === 'audit_trail' ? "#FFFFFF33" : "rgba(16, 185, 129, 0.2)",
+            color: activeAdminTab === 'audit_trail' ? "#FFFFFF" : "#34D399",
+            padding: "1px 5px",
+            borderRadius: 4,
+            fontFamily: "monospace",
+            fontWeight: 700
+          }}>
+            LIVE
+          </span>
+        </button>
 
         {onNavigateRole && (
           <>
@@ -384,111 +547,342 @@ export default function AdminDashboard({ onNavigateRole }: AdminDashboardProps =
         </div>
 
         <div style={styles.sidebarNote}>
-          Shared admin data — visible to anyone using this registrar console.
+          🔒 Developer Protected — Master registration records &amp; PINs restricted to Developer / DPO clearance under NDPR/GDPR privacy protocols.
         </div>
       </aside>
 
       {/* Main */}
       <main style={styles.main}>
-        <header style={styles.header}>
-          <div>
-            <h1 style={styles.h1}>Student Registrations</h1>
-            <p style={styles.sub}>Generate feedback and verification letters after registration.</p>
-          </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            {onNavigateRole && (
-              <button
-                style={{
-                  ...styles.secondaryBtn,
-                  background: "rgba(6, 182, 212, 0.15)",
-                  border: "1px solid rgba(6, 182, 212, 0.4)",
-                  color: "#38BDF8",
-                }}
-                onClick={() => onNavigateRole('cheal_hub')}
-              >
-                <ShieldCheck size={15} color="#38BDF8" /> CHEAL Platform
-              </button>
-            )}
-            {onNavigateRole && (
-              <button
-                style={styles.secondaryBtn}
-                onClick={() => onNavigateRole('hub')}
-              >
-                <ArrowLeft size={15} /> All Hubs
-              </button>
-            )}
-            <button style={styles.primaryBtn} onClick={() => setShowAdd(true)}>
-              <Plus size={16} /> New registration
-            </button>
-          </div>
-        </header>
-
-        <div style={styles.searchRow}>
-          <Search size={15} color="#8B81B8" />
-          <input
-            style={styles.searchInput}
-            placeholder="Search by name, email, course, or reg. number"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-
-        <div style={styles.tableWrap} className="scrollbar">
-          {!loaded ? (
-            <div style={styles.emptyState}>Loading registrations…</div>
-          ) : filtered.length === 0 ? (
-            <div style={styles.emptyState}>
-              <Sparkles size={22} color="#7C5CFC" />
-              <div style={{ marginTop: 10 }}>
-                {students.length === 0
-                  ? "No registrations yet. Create one to generate its feedback and verification letter."
-                  : "No matches for your search."}
+        {/* Developer Clearance Banner */}
+        <div style={{
+          background: devSession ? "rgba(16, 185, 129, 0.12)" : "rgba(124, 92, 252, 0.12)",
+          border: devSession ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(124, 92, 252, 0.3)",
+          borderRadius: 12,
+          padding: "12px 18px",
+          marginBottom: 20,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              background: devSession ? "#10B98122" : "#7C5CFC22",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: devSession ? "#34D399" : "#A78BFA",
+            }}>
+              <ShieldCheck size={18} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: devSession ? "#6EE7B7" : "#DDD6FE", display: "flex", alignItems: "center", gap: 8 }}>
+                {devSession ? `ACTIVE DEVELOPER CLEARANCE: ${devSession.developerName}` : "DEVELOPER PRIVACY PROTOCOL ENFORCED"}
+                <span style={{
+                  fontSize: 10,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  background: devSession ? "rgba(16, 185, 129, 0.2)" : "rgba(244, 185, 66, 0.2)",
+                  color: devSession ? "#6EE7B7" : "#FDE047",
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                  border: devSession ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(244, 185, 66, 0.4)"
+                }}>
+                  {devSession ? "ROOT DEV ENCLAVE" : "STRICT PRIVACY GUARD"}
+                </span>
+              </div>
+              <div style={{ fontSize: 11.5, color: "#8B81B8", marginTop: 2 }}>
+                {devSession 
+                  ? `Authenticated session token: ${devSession.authToken.slice(0, 14)}... • PII decrypted for authoritative review`
+                  : "Profile records & raw PIN credentials accessible only by authenticated Developers under NDPR / FERPA protocols."}
               </div>
             </div>
-          ) : (
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  {["Student", "Course / Subject", "Reg. No.", "PIN", "Status", ""].map((h) => (
-                    <th key={h} style={styles.th}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((s) => (
-                  <tr
-                    key={s.id}
-                    style={styles.tr}
-                    onClick={() => setActiveId(s.id)}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#2A2352")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                  >
-                    <td style={styles.td}>
-                      <div style={styles.nameCell}>{s.name}</div>
-                      <div style={styles.emailCell}>{s.email}</div>
-                    </td>
-                    <td style={styles.td}>
-                      <div>{s.course}</div>
-                      <div style={styles.subjectCell}>{s.subject}</div>
-                    </td>
-                    <td style={{ ...styles.td, ...styles.mono }}>{s.regNumber}</td>
-                    <td style={{ ...styles.td, ...styles.mono }}>{s.pin}</td>
-                    <td style={styles.td}>
-                      {s.feedbackSent ? (
-                        <span style={styles.badgeSent}><Check size={12} /> Sent</span>
-                      ) : (
-                        <span style={styles.badgePending}><Clock size={12} /> Pending</span>
-                      )}
-                    </td>
-                    <td style={{ ...styles.td, textAlign: "right" }}>
-                      <ChevronRight size={16} color="#8B81B8" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {devSession ? (
+              <>
+                <button
+                  onClick={() => setUnmaskData(!unmaskData)}
+                  style={{
+                    ...styles.secondaryBtn,
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  {unmaskData ? <EyeOff size={14} /> : <Eye size={14} />}
+                  {unmaskData ? "Mask PII" : "Unmask PII"}
+                </button>
+                <button
+                  onClick={handleDevLock}
+                  style={{
+                    ...styles.secondaryBtn,
+                    background: "rgba(244, 91, 105, 0.15)",
+                    borderColor: "rgba(244, 91, 105, 0.4)",
+                    color: "#FCA5A5",
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Lock size={14} /> Lock Vault
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setShowDevAuthModal(true)}
+                style={{
+                  ...styles.primaryBtn,
+                  background: "linear-gradient(135deg, #7C5CFC, #6366F1)",
+                  padding: "8px 14px",
+                  fontSize: 12.5,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <KeyRound size={14} /> Authenticate Developer Access
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tab Switcher */}
+        <div style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 20,
+          background: "rgba(255, 255, 255, 0.04)",
+          padding: 6,
+          borderRadius: 14,
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          width: "fit-content",
+        }}>
+          <button
+            onClick={() => setActiveAdminTab('registrations')}
+            style={{
+              background: activeAdminTab === 'registrations' ? "#7C5CFC" : "transparent",
+              color: activeAdminTab === 'registrations' ? "#FFFFFF" : "#A5B4FC",
+              border: "none",
+              borderRadius: 10,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <FileText size={15} />
+            <span>Student Registrations &amp; Vault</span>
+            <span style={{
+              background: activeAdminTab === 'registrations' ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.06)",
+              padding: "1px 6px",
+              borderRadius: 6,
+              fontSize: 11,
+              fontFamily: "monospace"
+            }}>
+              {students.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveAdminTab('audit_trail')}
+            style={{
+              background: activeAdminTab === 'audit_trail' ? "linear-gradient(135deg, #10B981, #059669)" : "transparent",
+              color: activeAdminTab === 'audit_trail' ? "#FFFFFF" : "#6EE7B7",
+              border: "none",
+              borderRadius: 10,
+              padding: "8px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              transition: "all 0.2s ease",
+            }}
+          >
+            <ShieldCheck size={15} color={activeAdminTab === 'audit_trail' ? "#FFFFFF" : "#34D399"} />
+            <span>Audit Trail &amp; Accountability Log</span>
+            <span style={{
+              background: activeAdminTab === 'audit_trail' ? "rgba(255,255,255,0.2)" : "rgba(16, 185, 129, 0.15)",
+              color: activeAdminTab === 'audit_trail' ? "#FFFFFF" : "#34D399",
+              padding: "1px 6px",
+              borderRadius: 6,
+              fontSize: 10,
+              fontFamily: "monospace",
+              fontWeight: 700
+            }}>
+              LIVE WATCHDOG
+            </span>
+          </button>
+
+          {!isStandaloneMode && (
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}${window.location.pathname}?hub=admin&mode=standalone`;
+                window.open(url, '_blank', 'noopener,noreferrer');
+              }}
+              style={{
+                background: "rgba(99, 102, 241, 0.15)",
+                color: "#C7D2FE",
+                border: "1px solid rgba(99, 102, 241, 0.3)",
+                borderRadius: 10,
+                padding: "8px 14px",
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginLeft: "auto",
+                transition: "all 0.2s ease",
+              }}
+              title="Open Admin Master Vault in a separate workstation window"
+            >
+              <ExternalLink size={14} color="#818CF8" />
+              <span>Open in Separate Page</span>
+            </button>
           )}
         </div>
+
+        {activeAdminTab === 'audit_trail' ? (
+          <div style={{ animation: "riseIn 0.3s ease" }}>
+            <AdminAuditTrailView onNavigateRole={onNavigateRole} />
+          </div>
+        ) : (
+          <>
+            <header style={styles.header}>
+              <div>
+                <h1 style={styles.h1}>Student Registrations</h1>
+                <p style={styles.sub}>Generate feedback and verification letters after registration.</p>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                {onNavigateRole && (
+                  <button
+                    style={{
+                      ...styles.secondaryBtn,
+                      background: "rgba(6, 182, 212, 0.15)",
+                      border: "1px solid rgba(6, 182, 212, 0.4)",
+                      color: "#38BDF8",
+                    }}
+                    onClick={() => onNavigateRole('cheal_hub')}
+                  >
+                    <ShieldCheck size={15} color="#38BDF8" /> CHEAL Platform
+                  </button>
+                )}
+                {onNavigateRole && (
+                  <button
+                    style={styles.secondaryBtn}
+                    onClick={() => onNavigateRole('hub')}
+                  >
+                    <ArrowLeft size={15} /> All Hubs
+                  </button>
+                )}
+                <button 
+                  style={styles.primaryBtn} 
+                  onClick={() => {
+                    if (!devSession) {
+                      setShowDevAuthModal(true);
+                    } else {
+                      setShowAdd(true);
+                    }
+                  }}
+                >
+                  <Plus size={16} /> New registration
+                </button>
+              </div>
+            </header>
+
+            <div style={styles.searchRow}>
+              <Search size={15} color="#8B81B8" />
+              <input
+                style={styles.searchInput}
+                placeholder="Search by name, email, course, or reg. number"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+
+            <div style={styles.tableWrap} className="scrollbar">
+              {!loaded ? (
+                <div style={styles.emptyState}>Loading registrations…</div>
+              ) : filtered.length === 0 ? (
+                <div style={styles.emptyState}>
+                  <Sparkles size={22} color="#7C5CFC" />
+                  <div style={{ marginTop: 10 }}>
+                    {students.length === 0
+                      ? "No registrations yet. Create one to generate its feedback and verification letter."
+                      : "No matches for your search."}
+                  </div>
+                </div>
+              ) : (
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      {["Student", "Course / Subject", "Reg. No.", "PIN (Developer Guarded)", "Status", ""].map((h) => (
+                        <th key={h} style={styles.th}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((s) => (
+                      <tr
+                        key={s.id}
+                        style={styles.tr}
+                        onClick={() => setActiveId(s.id)}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#2A2352")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <td style={styles.td}>
+                          <div style={styles.nameCell}>
+                            {devSession && unmaskData ? s.name : maskName(s.name)}
+                          </div>
+                          <div style={styles.emailCell}>
+                            {devSession && unmaskData ? s.email : maskEmail(s.email)}
+                          </div>
+                        </td>
+                        <td style={styles.td}>
+                          <div>{s.course}</div>
+                          <div style={styles.subjectCell}>{s.subject}</div>
+                        </td>
+                        <td style={{ ...styles.td, ...styles.mono }}>{s.regNumber}</td>
+                        <td style={{ ...styles.td, ...styles.mono }}>
+                          {devSession && unmaskData ? (
+                            <span style={{ color: "#F4B942", fontWeight: 700 }}>{s.pin}</span>
+                          ) : (
+                            <span style={{ color: "#8B81B8" }}>••••</span>
+                          )}
+                        </td>
+                        <td style={styles.td}>
+                          {s.feedbackSent ? (
+                            <span style={styles.badgeSent}><Check size={12} /> Sent</span>
+                          ) : (
+                            <span style={styles.badgePending}><Clock size={12} /> Pending</span>
+                          )}
+                        </td>
+                        <td style={{ ...styles.td, textAlign: "right" }}>
+                          <ChevronRight size={16} color="#8B81B8" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </>
+        )}
       </main>
 
       {/* Add registration modal */}
@@ -551,51 +945,186 @@ export default function AdminDashboard({ onNavigateRole }: AdminDashboardProps =
         <div style={styles.overlay} onClick={() => setActiveId(null)}>
           <div style={styles.detailPanel} className="scrollbar" onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>{active.name}</h2>
+              <h2 style={styles.modalTitle}>
+                {devSession && unmaskData ? active.name : maskName(active.name)}
+              </h2>
               <button style={styles.iconBtn} onClick={() => setActiveId(null)}><X size={16} /></button>
             </div>
 
-            <div style={styles.credRow}>
-              <div style={styles.credBox}>
-                <div style={styles.credLabel}>Registration No.</div>
-                <div style={styles.credValue}>{active.regNumber}</div>
+            {!devSession ? (
+              <div style={{ padding: "16px 0", textAlign: "center" }}>
+                <div style={{
+                  background: "rgba(244, 185, 66, 0.1)",
+                  border: "1px solid rgba(244, 185, 66, 0.3)",
+                  borderRadius: 12,
+                  padding: 18,
+                  marginBottom: 16,
+                  textAlign: "left",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#FDE047", fontWeight: 700, fontSize: 13 }}>
+                    <ShieldCheck size={16} /> Developer Privacy Protocol Restricted
+                  </div>
+                  <p style={{ color: "#D1D5DB", fontSize: 12, lineHeight: 1.5, marginTop: 6 }}>
+                    Full profile verification letters, plaintext PINs, and student communication are restricted exclusively to authorized developers and data privacy officers.
+                  </p>
+                </div>
+                <button
+                  style={{ ...styles.primaryBtn, width: "100%", justifyContent: "center" }}
+                  onClick={() => {
+                    setActiveId(null);
+                    setShowDevAuthModal(true);
+                  }}
+                >
+                  <KeyRound size={15} /> Authenticate as Developer
+                </button>
               </div>
-              <div style={styles.credBox}>
-                <div style={styles.credLabel}>PIN</div>
-                <div style={styles.credValue}>{active.pin}</div>
-              </div>
-            </div>
-            <div style={styles.courseLine}>{active.course} — {active.subject}</div>
-            <div style={styles.emailLine}><Mail size={13} /> {active.email}</div>
+            ) : (
+              <>
+                <div style={styles.credRow}>
+                  <div style={styles.credBox}>
+                    <div style={styles.credLabel}>Registration No.</div>
+                    <div style={styles.credValue}>{active.regNumber}</div>
+                  </div>
+                  <div style={styles.credBox}>
+                    <div style={styles.credLabel}>PIN</div>
+                    <div style={styles.credValue}>
+                      {unmaskData ? active.pin : "••••"}
+                    </div>
+                  </div>
+                </div>
+                <div style={styles.courseLine}>{active.course} — {active.subject}</div>
+                <div style={styles.emailLine}>
+                  <Mail size={13} /> {unmaskData ? active.email : maskEmail(active.email)}
+                </div>
 
-            <div style={styles.sectionLabel}><Mail size={13} /> Feedback message preview</div>
-            <pre style={styles.previewBox}>{feedbackBody(active)}</pre>
+                <div style={styles.sectionLabel}><Mail size={13} /> Feedback message preview</div>
+                <pre style={styles.previewBox}>{feedbackBody(active)}</pre>
 
-            <div style={styles.sectionLabel}><ShieldCheck size={13} /> Verification letter preview</div>
-            <pre style={{ ...styles.previewBox, ...styles.letterBox }}>{letterBody(active)}</pre>
+                <div style={styles.sectionLabel}><ShieldCheck size={13} /> Verification letter preview</div>
+                <pre style={{ ...styles.previewBox, ...styles.letterBox }}>{letterBody(active)}</pre>
 
-            <div style={styles.detailActions}>
-              <button
-                style={styles.secondaryBtn}
-                onClick={() => downloadText(`${active.regNumber}-verification-letter.txt`, letterBody(active))}
-              >
-                <Download size={15} /> Download letter
-              </button>
-              <button
-                style={active.feedbackSent ? styles.disabledBtn : styles.primaryBtn}
-                disabled={active.feedbackSent}
-                onClick={() => {
-                  markSent(active.id);
-                  showToast(`Feedback + letter sent to ${active.email} (simulated)`);
-                }}
-              >
-                <Send size={15} /> {active.feedbackSent ? "Already sent" : "Send to student email"}
-              </button>
-            </div>
-            {active.feedbackSent && (
-              <div style={styles.sentNote}>Sent {formatDate(active.sentAt)} · this run only simulates delivery.</div>
+                <div style={styles.detailActions}>
+                  <button
+                    style={styles.secondaryBtn}
+                    onClick={() => downloadText(`${active.regNumber}-verification-letter.txt`, letterBody(active))}
+                  >
+                    <Download size={15} /> Download letter
+                  </button>
+                  <button
+                    style={active.feedbackSent ? styles.disabledBtn : styles.primaryBtn}
+                    disabled={active.feedbackSent}
+                    onClick={() => {
+                      markSent(active.id);
+                      showToast(`Feedback + letter sent to ${active.email} (simulated)`);
+                    }}
+                  >
+                    <Send size={15} /> {active.feedbackSent ? "Already sent" : "Send to student email"}
+                  </button>
+                </div>
+                {active.feedbackSent && (
+                  <div style={styles.sentNote}>Sent {formatDate(active.sentAt)} · this run only simulates delivery.</div>
+                )}
+              </>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Developer Authorization Modal */}
+      {showDevAuthModal && (
+        <div style={styles.overlay} onClick={() => setShowDevAuthModal(false)}>
+          <form style={styles.modal} onClick={(e) => e.stopPropagation()} onSubmit={handleDevAuth}>
+            <div style={styles.modalHeader}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <ShieldCheck size={18} color="#7C5CFC" />
+                <h2 style={styles.modalTitle}>Developer Privacy Clearance</h2>
+              </div>
+              <button type="button" style={styles.iconBtn} onClick={() => setShowDevAuthModal(false)}><X size={16} /></button>
+            </div>
+
+            <div style={{
+              background: "rgba(124, 92, 252, 0.12)",
+              border: "1px solid rgba(124, 92, 252, 0.25)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              marginBottom: 14,
+              fontSize: 12,
+              color: "#C4B5FD",
+              lineHeight: 1.5,
+            }}>
+              Registered student profile records and plaintext credentials are strictly protected under NDPR / FERPA privacy protocols and accessible by developers only.
+            </div>
+
+            <label style={styles.label}>Select Developer Identity</label>
+            <select
+              style={styles.input}
+              value={selectedDevId}
+              onChange={(e) => setSelectedDevId(e.target.value)}
+            >
+              {AUTHORIZED_DEVELOPERS.map((d) => (
+                <option key={d.developerId} value={d.developerId}>
+                  {d.name} ({d.developerId}) — {d.role}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+              <label style={{ ...styles.label, margin: 0 }}>Developer Secret Key</label>
+              <button
+                type="button"
+                onClick={() => setDevKeyInput("DEV-SECURE-365!")}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#38BDF8",
+                  fontSize: 11,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+              >
+                Auto-fill Test Key
+              </button>
+            </div>
+            <input
+              style={{ ...styles.input, marginTop: 6 }}
+              type="password"
+              value={devKeyInput}
+              onChange={(e) => setDevKeyInput(e.target.value)}
+              placeholder="Enter developer access key..."
+              required
+            />
+
+            {devAuthError && (
+              <div style={{
+                marginTop: 12,
+                padding: "8px 12px",
+                background: "rgba(244, 91, 105, 0.15)",
+                border: "1px solid rgba(244, 91, 105, 0.3)",
+                borderRadius: 8,
+                color: "#FCA5A5",
+                fontSize: 12,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}>
+                <AlertCircle size={14} />
+                <span>{devAuthError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              style={{
+                ...styles.primaryBtn,
+                width: "100%",
+                justifyContent: "center",
+                marginTop: 18,
+                background: "linear-gradient(135deg, #7C5CFC, #6366F1)",
+              }}
+            >
+              <Lock size={15} /> Authorize Developer Access
+            </button>
+          </form>
         </div>
       )}
 

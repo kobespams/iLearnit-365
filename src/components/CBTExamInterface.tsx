@@ -27,8 +27,11 @@ import {
   Hash,
   ChevronRight,
   Lightbulb,
-  ExternalLink
+  ExternalLink,
+  Volume2
 } from 'lucide-react';
+import { EducatorVoicePresenter } from './EducatorVoicePresenter';
+import { speechEngine, getActiveEducatorVoice } from '../services/educatorVoiceService';
 import { 
   CBTExamConfig, 
   CBTQuestion, 
@@ -951,19 +954,39 @@ export const CBTExamInterface: React.FC<CBTExamInterfaceProps> = ({
                     </span>
                   </div>
 
-                  {/* Flag for Review Button */}
-                  <button
-                    id={`flag-question-${currentQ.id}`}
-                    onClick={() => toggleFlagQuestion(currentQ.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors flex items-center space-x-1.5 ${
-                      flaggedQuestionIds.includes(currentQ.id)
-                        ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
-                        : 'bg-slate-50 dark:bg-slate-700/40 text-slate-500 border-slate-200 dark:border-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <Flag className="w-3.5 h-3.5" />
-                    <span>{flaggedQuestionIds.includes(currentQ.id) ? 'Flagged for Review' : 'Flag for Review'}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Read Question Aloud in Educator Voice */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const voice = getActiveEducatorVoice();
+                        const optionsPrompt = currentQ.options.map((opt, i) => `Option ${String.fromCharCode(65 + i)}: ${opt}`).join('. ');
+                        speechEngine.speak(
+                          `Question ${currentQuestionIndex + 1}. Topic: ${currentQ.topic}. ${currentQ.questionText}. ${optionsPrompt}`,
+                          voice
+                        );
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 flex items-center space-x-1.5 transition cursor-pointer"
+                      title="Listen to question spoken in educator voice"
+                    >
+                      <Volume2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span className="hidden sm:inline">Read Aloud</span>
+                    </button>
+
+                    {/* Flag for Review Button */}
+                    <button
+                      id={`flag-question-${currentQ.id}`}
+                      onClick={() => toggleFlagQuestion(currentQ.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors flex items-center space-x-1.5 ${
+                        flaggedQuestionIds.includes(currentQ.id)
+                          ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-300'
+                          : 'bg-slate-50 dark:bg-slate-700/40 text-slate-500 border-slate-200 dark:border-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <Flag className="w-3.5 h-3.5" />
+                      <span>{flaggedQuestionIds.includes(currentQ.id) ? 'Flagged for Review' : 'Flag for Review'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Question Stem */}
@@ -1333,6 +1356,22 @@ export const CBTExamInterface: React.FC<CBTExamInterfaceProps> = ({
                 <div className="text-xs text-slate-500">Per Question</div>
               </div>
 
+            </div>
+
+            {/* Embedded Educator Voice Post-Exam Debrief */}
+            <div className="print:hidden">
+              <EducatorVoicePresenter
+                moduleName="CBT Assessment Suite"
+                topicTitle={`Exam Debrief: ${resultSlip.examTitle}`}
+                overviewSpeech={`Congratulations on completing the ${resultSlip.examTitle}. You achieved a score of ${resultSlip.breakdown.totalScore} out of ${resultSlip.breakdown.maxScore}, which is ${resultSlip.breakdown.percentage} percent, earning a grade of ${resultSlip.breakdown.grade}. Review the detailed topic breakdown below to focus your revision on areas that need reinforcement.`}
+                keyPoints={[
+                  `Overall Score: ${resultSlip.breakdown.totalScore}/${resultSlip.breakdown.maxScore} (${resultSlip.breakdown.percentage}%)`,
+                  `Letter Grade: ${resultSlip.breakdown.grade} • WAEC Rating: ${calculateGradeDetails(resultSlip.breakdown.percentage).waecGrade}`,
+                  `Total Questions Answered: ${resultSlip.breakdown.totalQuestions} questions`,
+                  `Speed & Time Efficiency: ${Math.floor(resultSlip.breakdown.timeTakenSeconds / 60)}m ${resultSlip.breakdown.timeTakenSeconds % 60}s`
+                ]}
+                studentName={resultSlip.candidateName}
+              />
             </div>
 
             {/* Topic-by-Topic Mastery Diagnostic Breakdown */}

@@ -29,6 +29,7 @@ import { JSSLessonTopic, JSSLevel, WeeklyLessonBreakdown } from '../types';
 import { generateContent } from '../services/api';
 import { PlainTextDocumentModal } from './PlainTextDocumentModal';
 import { convertToPlainTextDocument } from '../utils/courseIconRegistry';
+import { EducatorVoicePresenter } from './EducatorVoicePresenter';
 
 interface JSSMathExplorerProps {
   onAssignToClass?: (lesson: JSSLessonTopic) => void;
@@ -637,6 +638,26 @@ User Question/Task: ${promptToUse}`;
                   </button>
                 </div>
               </div>
+
+              {/* Embedded Educator Voice Presenter */}
+              <EducatorVoicePresenter
+                moduleName="JSS Mathematics"
+                topicTitle={`${activeLesson.level}: ${activeLesson.title}`}
+                overviewSpeech={activeLesson.summary}
+                keyPoints={activeLesson.keyFormulas.slice(0, 4)}
+                checkpointQuestion={activeLesson.practiceQuestions.length > 0 ? {
+                  question: activeLesson.practiceQuestions[0].question,
+                  options: [
+                    activeLesson.practiceQuestions[0].answer,
+                    "Undefined or infinite value",
+                    "Value equal to 0",
+                    "Inverse of the term"
+                  ],
+                  correctIndex: 0,
+                  explanation: activeLesson.practiceQuestions[0].hint || "Verify by substituting the calculated value back into the original equation."
+                } : undefined}
+                studentName="Scholar"
+              />
 
               {/* Overview / Summary */}
               <div className="prose max-w-none text-slate-700 text-sm leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200/60">

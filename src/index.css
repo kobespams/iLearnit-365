@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *, [data-theme="midnight_navy"], [data-theme="midnight_navy"] *, [data-theme="obsidian_gold"], [data-theme="obsidian_gold"] *, [data-theme="bioluminescent_emerald"], [data-theme="bioluminescent_emerald"] *, [data-theme="cosmic_aurora"], [data-theme="cosmic_aurora"] *));
 
 @layer base {
   :root {
@@ -14,7 +15,7 @@
     --white: #ffffff;
     --card-bg: #ffffff;
     --header-bg: rgba(255, 255, 255, 0.95);
-    --muted-text: #4C5A75;
+    --muted-text: #475569;
   }
 
   .dark, [data-theme="dark"] {
@@ -30,25 +31,66 @@
     --white: #1E293B;
     --card-bg: #1E293B;
     --header-bg: rgba(15, 23, 42, 0.95);
-    --muted-text: #94A3B8;
+    --muted-text: #CBD5E1;
+  }
+
+  html {
+    font-size: 16px;
+    scroll-behavior: smooth;
   }
 
   body {
     background-color: var(--paper);
     color: var(--ink);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1, h2, h3, h4, .font-sora {
-    font-family: 'Sora', sans-serif;
+    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
   }
 
-  .mono {
+  .mono, .font-mono {
     font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+  }
+
+  /* Accessible keyboard focus rings across all interactive elements */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid #2F6FE0;
+    outline-offset: 2px;
+  }
+
+  /* High contrast input styling guarantees text visibility across all themes */
+  input, textarea, select {
+    color: #0f172a;
+  }
+
+  .dark input, .dark textarea, .dark select,
+  [data-theme="dark"] input, [data-theme="dark"] textarea, [data-theme="dark"] select,
+  [data-theme="midnight_navy"] input, [data-theme="midnight_navy"] textarea, [data-theme="midnight_navy"] select,
+  [data-theme="bioluminescent_emerald"] input, [data-theme="bioluminescent_emerald"] textarea, [data-theme="bioluminescent_emerald"] select,
+  [data-theme="obsidian_gold"] input, [data-theme="obsidian_gold"] textarea, [data-theme="obsidian_gold"] select,
+  [data-theme="cosmic_aurora"] input, [data-theme="cosmic_aurora"] textarea, [data-theme="cosmic_aurora"] select {
+    color: #f8fafc;
+  }
+}
+
+/* Respect reduced motion accessibility preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -72,23 +114,10 @@
     radial-gradient(circle at 50% 100%, rgba(59, 130, 246, 0.10), transparent 45%);
 }
 
-/* Wire Draw & Node Animations */
-@keyframes wireDraw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes nodePopIn {
-  to {
-    opacity: 1;
-  }
-}
-
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -97,21 +126,9 @@
 }
 
 .animate-fade-up {
-  animation: fadeUp 0.7s ease forwards;
+  animation: fadeUp 0.4s ease forwards;
 }
 
-.wire-path {
-  stroke-dasharray: 400;
-  stroke-dashoffset: 400;
-  animation: wireDraw 1.4s ease forwards;
-}
-
-.wire-node {
-  opacity: 0;
-  animation: nodePopIn 0.4s ease forwards;
-}
-
-/* Marquee / Newsline Ticker Animation */
 @keyframes newslineMarquee {
   0% {
     transform: translateX(0%);
@@ -139,16 +156,15 @@
     transform: scale(1);
   }
   50% {
-    opacity: 0.6;
-    transform: scale(1.15);
+    opacity: 0.7;
+    transform: scale(1.06);
   }
 }
 
 .animate-pulse-glow {
-  animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: pulseGlow 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Digital Animation & Cyber Scanline FX for iLearnit Logo Containers */
 @keyframes scanlineSweep {
   0% {
     transform: translateY(-100%);
@@ -169,40 +185,12 @@
   }
 }
 
-@keyframes cyberHoloShimmer {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
 .cyber-logo-container {
   position: relative;
   overflow: hidden;
   background: radial-gradient(circle at 50% 50%, #0d1b38 0%, #060d1e 100%);
   border: 2px solid rgba(6, 182, 212, 0.5);
   animation: neonPulseGlow 3.5s ease-in-out infinite;
-}
-
-.cyber-logo-container::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 10;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0),
-    rgba(255, 255, 255, 0) 50%,
-    rgba(0, 0, 0, 0.35) 50%,
-    rgba(0, 0, 0, 0.35)
-  );
-  background-size: 100% 4px;
 }
 
 .cyber-scanline {
@@ -223,4 +211,3 @@
   z-index: 12;
   animation: scanlineSweep 4s linear infinite;
 }
-

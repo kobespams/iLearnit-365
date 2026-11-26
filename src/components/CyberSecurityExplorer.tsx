@@ -42,6 +42,7 @@ import { CBTExamInterface } from './CBTExamInterface';
 import { CyberPracticeLab } from './CyberPracticeLab';
 import { PlainTextDocumentModal } from './PlainTextDocumentModal';
 import { convertToPlainTextDocument } from '../utils/courseIconRegistry';
+import { EducatorVoicePresenter } from './EducatorVoicePresenter';
 
 interface CyberSecurityExplorerProps {
   onBack?: () => void;
@@ -434,6 +435,26 @@ export const CyberSecurityExplorer: React.FC<CyberSecurityExplorerProps> = ({
                               Pre-Exam Study Guide
                             </span>
                           </div>
+
+                          {/* Embedded Educator Voice Presenter */}
+                          <EducatorVoicePresenter
+                            moduleName="Cybersecurity Lab"
+                            topicTitle={`Week ${lesson.weekNumber}: ${lesson.weekTitle}`}
+                            overviewSpeech={lesson.revisedNotes.topicSummary}
+                            keyPoints={lesson.revisedNotes.detailedSections.map(s => s.heading).slice(0, 4)}
+                            checkpointQuestion={lesson.gradeLevelTest && lesson.gradeLevelTest.questions.length > 0 ? {
+                              question: lesson.gradeLevelTest.questions[0].question,
+                              options: [
+                                lesson.gradeLevelTest.questions[0].options[lesson.gradeLevelTest.questions[0].correctAnswer],
+                                "Disable all firewall encryption rules",
+                                "Use plain text HTTP across the public network",
+                                "Grant administrative root access to all guests"
+                              ],
+                              correctIndex: 0,
+                              explanation: lesson.gradeLevelTest.questions[0].explanation || "Adhering to strict zero-trust validation protects credentials across public and private segments."
+                            } : undefined}
+                            studentName={currentUser?.name || "Cyber Scholar"}
+                          />
 
                           {/* Overview Summary */}
                           <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-800/90 p-4 rounded-xl border border-indigo-100 dark:border-slate-700">

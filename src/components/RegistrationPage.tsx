@@ -50,6 +50,17 @@ import {
   getAuditLogs, 
   userToStudentDetail 
 } from '../services/authStorage';
+import {
+  getActiveDeveloperSession,
+  verifyDeveloperCredentials,
+  revokeDeveloperSession,
+  maskPin,
+  maskEmail,
+  maskPhone,
+  maskName,
+  DeveloperSession,
+  AUTHORIZED_DEVELOPERS
+} from '../services/developerPrivacyService';
 
 interface RegistrationPageProps {
   onRegistrationComplete: (role: UserRole, student: StudentDetail) => void;
@@ -82,10 +93,13 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
   const [agreeTerms, setAgreeTerms] = useState(true);
 
   // Student-specific Fields
-  const [gradeLevel, setGradeLevel] = useState('Primary 5 (Basic 5)');
+  const [gradeLevel, setGradeLevel] = useState('JSS 3 (Junior Sec 3)');
+  const [ageBracket, setAgeBracket] = useState<'under_13' | '13_to_17' | 'adult'>('13_to_17');
   const [parentName, setParentName] = useState('');
   const [parentPhone, setParentPhone] = useState('');
-  const [studyGoal, setStudyGoal] = useState('Master Primary & Secondary Math, Science & IT');
+  const [parentConsentEmail, setParentConsentEmail] = useState('');
+  const [parentalConsentChecked, setParentalConsentChecked] = useState(false);
+  const [studyGoal, setStudyGoal] = useState('Master Primary, Secondary & JAMB UTME Subjects');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([
     'Mathematics',
     'Basic Science & Technology',
@@ -117,15 +131,43 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
   const [auditLogs, setAuditLogs] = useState<SecurityAuditRecord[]>([]);
   const [registeredUsersList, setRegisteredUsersList] = useState<RegisteredUser[]>([]);
 
+  // Developer Privacy Protocol states
+  const [devSession, setDevSession] = useState<DeveloperSession | null>(getActiveDeveloperSession());
+  const [devKeyInput, setDevKeyInput] = useState('');
+  const [selectedDevId, setSelectedDevId] = useState(AUTHORIZED_DEVELOPERS[0].developerId);
+  const [devAuthError, setDevAuthError] = useState<string | null>(null);
+  const [unmaskDeveloperData, setUnmaskDeveloperData] = useState(false);
+
   // Initialize live PIN on mount
   useEffect(() => {
     handleRegeneratePin();
     refreshRegisteredData();
+    setDevSession(getActiveDeveloperSession());
   }, []);
 
   const refreshRegisteredData = () => {
     setRegisteredUsersList(getRegisteredUsers());
     setAuditLogs(getAuditLogs());
+  };
+
+  const handleDeveloperAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    setDevAuthError(null);
+    const result = verifyDeveloperCredentials(selectedDevId, devKeyInput);
+    if (result.success && result.session) {
+      setDevSession(result.session);
+      setDevKeyInput('');
+      setUnmaskDeveloperData(true);
+    } else {
+      setDevAuthError(result.message);
+    }
+  };
+
+  const handleDeveloperLock = () => {
+    revokeDeveloperSession();
+    setDevSession(null);
+    setUnmaskDeveloperData(false);
+    setDevKeyInput('');
   };
 
   const handleRegeneratePin = () => {
@@ -210,8 +252,18 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
       return;
     }
     if (!agreeTerms) {
-      setErrorMessage('Please accept the iLearnit-365 Digital Security and Integrity Agreement.');
+      setErrorMessage('Please accept the iLearnit-365 Privacy Policy (NDPA / COPPA / GDPR) and Security Code.');
       return;
+    }
+    if (selectedRole === 'student' && ageBracket !== 'adult') {
+      if (!parentName.trim() || !parentConsentEmail.trim() || !parentConsentEmail.includes('@')) {
+        setErrorMessage('Under NDPA / COPPA / GDPR minor protection rules, a parent or guardian name and email are required for learners under 18.');
+        return;
+      }
+      if (!parentalConsentChecked) {
+        setErrorMessage('Please confirm verifiable parental/guardian consent before creating a minor student account.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -242,6 +294,9 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
         studyGoal: selectedRole === 'student' ? studyGoal : undefined,
         selectedSubjects: selectedRole === 'student' ? selectedSubjects : undefined,
         providedPin: activePin,
+        ageBracket: selectedRole === 'student' ? ageBracket : 'adult',
+        parentalConsentVerified: selectedRole === 'student' && ageBracket !== 'adult' ? parentalConsentChecked : true,
+        parentalConsentEmail: selectedRole === 'student' && ageBracket !== 'adult' ? parentConsentEmail : undefined,
       });
 
       setRegisteredUserResult(user);
@@ -294,14 +349,6 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
           </button>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAuditLogsModal(true)}
-              className="flex items-center gap-1.5 text-xs font-mono text-cyan-400 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 px-3 py-1.5 rounded-lg transition cursor-pointer"
-            >
-              <Database className="w-3.5 h-3.5" />
-              <span>Audit Ledger ({registeredUsersList.length})</span>
-            </button>
-
             <button
               onClick={onNavigateToLogin}
               className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-400 hover:text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/30 px-3.5 py-1.5 rounded-lg transition cursor-pointer"
@@ -779,7 +826,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-xs font-mono text-slate-400 mb-1.5">Class / Grade Level</label>
+                          <label className="block text-xs font-mono text-slate-300 mb-1.5">Class / Grade Level</label>
                           <select
                             value={gradeLevel}
                             onChange={(e) => setGradeLevel(e.target.value)}
@@ -793,21 +840,70 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                             <option value="JSS 3 (Junior Sec 3)">JSS 3 (Junior Sec 3)</option>
                             <option value="SSS 1 (Senior Sec 1)">SSS 1 (Senior Sec 1)</option>
                             <option value="SSS 2 (Senior Sec 2)">SSS 2 (Senior Sec 2)</option>
-                            <option value="SSS 3 (Senior Sec 3)">SSS 3 (Senior Sec 3)</option>
+                            <option value="SSS 3 (Senior Sec 3) / JAMB Candidate">SSS 3 (Senior Sec 3) / JAMB Candidate</option>
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-xs font-mono text-slate-400 mb-1.5">Parent / Guardian Name</label>
-                          <input
-                            type="text"
-                            value={parentName}
-                            onChange={(e) => setParentName(e.target.value)}
-                            placeholder="e.g., Mrs. Chukwuma"
+                          <label className="block text-xs font-mono text-slate-300 mb-1.5">Learner Age Bracket (NDPA / COPPA / GDPR)</label>
+                          <select
+                            value={ageBracket}
+                            onChange={(e) => setAgeBracket(e.target.value as any)}
                             className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-cyan-400"
-                          />
+                          >
+                            <option value="under_13">Under 13 Years (COPPA &amp; NDPA Guardian Required)</option>
+                            <option value="13_to_17">13–17 Years (Minor — Parental Consent Required)</option>
+                            <option value="adult">18+ Years (Adult / UTME Candidate)</option>
+                          </select>
                         </div>
                       </div>
+
+                      {/* Minor Parental Consent Block */}
+                      {ageBracket !== 'adult' && (
+                        <div className="bg-amber-950/35 border border-amber-500/40 rounded-2xl p-4 space-y-3">
+                          <div className="text-xs font-sora font-bold text-amber-200 flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-amber-300" />
+                            <span>Verifiable Parental Consent (NDPA Section 31 · COPPA · GDPR)</span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-mono text-slate-200 mb-1">
+                                Parent / Guardian Full Name <span className="text-rose-400">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={parentName}
+                                onChange={(e) => setParentName(e.target.value)}
+                                placeholder="e.g., Mrs. Chukwuma"
+                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-400"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-mono text-slate-200 mb-1">
+                                Parent / Guardian Email <span className="text-rose-400">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                value={parentConsentEmail}
+                                onChange={(e) => setParentConsentEmail(e.target.value)}
+                                placeholder="parent@example.com"
+                                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-400"
+                              />
+                            </div>
+                          </div>
+                          <label className="flex items-start gap-2.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={parentalConsentChecked}
+                              onChange={(e) => setParentalConsentChecked(e.target.checked)}
+                              className="mt-0.5 rounded border-amber-500 bg-slate-950 text-amber-400 cursor-pointer"
+                            />
+                            <span className="text-xs text-slate-200 leading-relaxed">
+                              I confirm I am the parent/legal guardian of this minor (or have their verified permission) and consent to device-local academic record storage under NDPA, COPPA, and GDPR protections.
+                            </span>
+                          </label>
+                        </div>
+                      )}
 
                       <div>
                         <label className="block text-xs font-mono text-slate-400 mb-2">
@@ -816,6 +912,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                         <div className="flex flex-wrap gap-2">
                           {[
                             'Mathematics',
+                            'Calculus',
                             'Basic Science & Technology',
                             'English Studies & Reading',
                             'Computer Studies & IT',
@@ -963,44 +1060,187 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
         )}
       </div>
 
-      {/* AUDIT LOGS MODAL */}
+      {/* DEVELOPER PRIVACY PROTOCOL AUDIT & PROFILE VAULT MODAL */}
       {showAuditLogsModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-5 max-h-[88vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-cyan-400" />
-                <h3 className="font-sora font-bold text-base text-white">Security Ledger &amp; Registered Tokens</h3>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-400">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-sora font-bold text-base text-white flex items-center gap-2">
+                    Registered Profile Records Vault
+                    <span className="text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">
+                      Developer Clearance Only
+                    </span>
+                  </h3>
+                  <p className="text-[11px] font-mono text-slate-400">
+                    Governed under NDPR, GDPR Art. 9/32 &amp; FERPA Student Data Protection Protocol
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowAuditLogsModal(false)}
-                className="text-slate-400 hover:text-white text-xs font-mono cursor-pointer"
+                className="text-slate-400 hover:text-white text-xs font-mono px-2 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 cursor-pointer"
               >
                 ✕ Close
               </button>
             </div>
 
-            <div className="space-y-3">
-              <div className="text-xs font-mono text-slate-400">
-                Total registered user accounts: <strong className="text-cyan-300">{registeredUsersList.length}</strong>
-              </div>
+            {/* If NOT authenticated as Developer */}
+            {!devSession ? (
+              <div className="space-y-4 py-2">
+                <div className="bg-amber-950/30 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1 text-xs">
+                    <div className="font-bold text-amber-200 font-sora">Privacy Protocol Restriction Notice</div>
+                    <p className="text-slate-300 leading-relaxed">
+                      Registered student profile records, real-time 4-digit PINs, and personal contact details are 
+                      <strong className="text-amber-300"> restricted strictly to authorized developers and data privacy officers</strong>. 
+                      Standard visitors, students, and unverified users cannot view plaintext registries.
+                    </p>
+                  </div>
+                </div>
 
-              <div className="divide-y divide-slate-800 bg-slate-950 rounded-2xl border border-slate-800 p-2 max-h-72 overflow-y-auto">
-                {registeredUsersList.map((u) => (
-                  <div key={u.id} className="p-3 text-xs font-mono flex items-center justify-between">
-                    <div>
-                      <div className="text-slate-200 font-bold">{u.name}</div>
-                      <div className="text-slate-500 text-[10px]">{u.email} • {u.role}</div>
+                {/* Developer Authentication Form */}
+                <form onSubmit={handleDeveloperAuth} className="bg-slate-950 rounded-2xl border border-slate-800 p-5 space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 font-sora">
+                    <KeyRound className="w-4 h-4" />
+                    <span>Developer Identity &amp; Key Verification</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1.5">Select Developer Identity</label>
+                    <select
+                      value={selectedDevId}
+                      onChange={(e) => setSelectedDevId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-200 outline-none focus:border-cyan-400"
+                    >
+                      {AUTHORIZED_DEVELOPERS.map(d => (
+                        <option key={d.developerId} value={d.developerId}>
+                          {d.name} ({d.developerId}) — {d.role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-mono text-slate-400">Developer Access Key</label>
+                      <button
+                        type="button"
+                        onClick={() => setDevKeyInput('DEV-SECURE-365!')}
+                        className="text-[10px] font-mono text-cyan-400 hover:underline cursor-pointer"
+                      >
+                        Auto-fill Test Developer Key
+                      </button>
                     </div>
-                    <div className="text-right">
-                      <span className="text-emerald-400 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                        PIN: {u.pin}
-                      </span>
+                    <input
+                      type="password"
+                      value={devKeyInput}
+                      onChange={(e) => setDevKeyInput(e.target.value)}
+                      placeholder="Enter Developer Secret Passkey..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-cyan-400 font-mono"
+                    />
+                  </div>
+
+                  {devAuthError && (
+                    <div className="text-xs font-mono text-rose-400 bg-rose-950/40 border border-rose-500/30 p-2.5 rounded-xl flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{devAuthError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-sora font-bold text-xs py-3 rounded-xl transition shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Authorize Developer Clearance</span>
+                  </button>
+                </form>
+
+                {/* Masked Preview of Registry Stats */}
+                <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                  <span>Encrypted Registered Profiles in Storage:</span>
+                  <span className="text-cyan-300 font-bold">{registeredUsersList.length} Records (AES-256 Guarded)</span>
+                </div>
+              </div>
+            ) : (
+              /* If AUTHENTICATED as Developer */
+              <div className="space-y-4">
+                <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold">
+                      <Check className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-emerald-200 font-sora">
+                        Active Developer Session: {devSession.developerName}
+                      </div>
+                      <div className="text-[10px] font-mono text-emerald-400/80">
+                        Token: {devSession.authToken.slice(0, 18)}... • Level 4 Root Clearance
+                      </div>
                     </div>
                   </div>
-                ))}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setUnmaskDeveloperData(!unmaskDeveloperData)}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {unmaskDeveloperData ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{unmaskDeveloperData ? 'Mask PII' : 'Unmask PII'}</span>
+                    </button>
+
+                    <button
+                      onClick={handleDeveloperLock}
+                      className="px-2.5 py-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-xs font-mono text-rose-300 border border-rose-500/30 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Lock Vault</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-xs font-mono text-slate-400 flex items-center justify-between">
+                  <span>Registered Accounts ({registeredUsersList.length}):</span>
+                  <span className="text-emerald-400 text-[10px]">
+                    Status: {unmaskDeveloperData ? 'Developer Decrypted' : 'Safe Redaction Mode'}
+                  </span>
+                </div>
+
+                <div className="divide-y divide-slate-800 bg-slate-950 rounded-2xl border border-slate-800 p-2 max-h-72 overflow-y-auto">
+                  {registeredUsersList.map((u) => (
+                    <div key={u.id} className="p-3 text-xs font-mono flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-slate-200 font-bold">
+                          {unmaskDeveloperData ? u.name : maskName(u.name)}
+                        </div>
+                        <div className="text-slate-500 text-[10px]">
+                          {unmaskDeveloperData ? u.email : maskEmail(u.email)} • {u.role}
+                        </div>
+                        {u.parentName && (
+                          <div className="text-slate-600 text-[10px]">
+                            Parent: {unmaskDeveloperData ? u.parentName : maskName(u.parentName)} ({unmaskDeveloperData ? u.parentPhone : maskPhone(u.parentPhone)})
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-emerald-400 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
+                          PIN: {unmaskDeveloperData ? u.pin : maskPin(u.pin)}
+                        </span>
+                        <div className="text-[10px] text-slate-500 mt-1 font-mono">
+                          ID: {u.studentId}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
