@@ -1,5 +1,5 @@
-import { RegisteredUser, SecurityAuditRecord } from '../types';
 import { recordAuditEvent } from './authStorage';
+import { verifyAdminMasterKeyForPII } from './admin3FAService';
 
 export interface DeveloperSession {
   developerId: string;
@@ -13,29 +13,10 @@ export interface DeveloperSession {
   sessionNonce: string;
 }
 
-export const AUTHORIZED_DEVELOPERS = [
-  {
-    developerId: 'DEV-ROOT-001',
-    name: 'Lead Systems Developer',
-    email: 'developer@ilearnit365.edu',
-    role: 'LEAD_SYSTEM_DEVELOPER' as const,
-    clearanceLevel: 'LEVEL_4_ROOT_DEVELOPER' as const,
-    accessKey: 'DEV-SECURE-365!',
-    altKey: 'developer',
-  },
-  {
-    developerId: 'DEV-DPO-002',
-    name: 'Data Privacy Officer',
-    email: 'privacy@ilearnit365.edu',
-    role: 'DATA_PRIVACY_OFFICER' as const,
-    clearanceLevel: 'LEVEL_4_ROOT_DEVELOPER' as const,
-    accessKey: 'PRIVACY-COMPLIANT-2026',
-    altKey: 'privacy',
-  },
-];
-
-const DEV_SESSION_STORAGE_KEY = 'ilearnit_365_developer_session_v1';
 const PRIVACY_AUDIT_KEY = 'ilearnit_365_privacy_audit_records_v1';
+
+// Strictly in-memory DPO / PII unmasking clearance (never written to localStorage or sessionStorage)
+let inMemoryDevSession: DeveloperSession | null = null;
 
 export interface PrivacyAuditRecord {
   id: string;
@@ -49,103 +30,94 @@ export interface PrivacyAuditRecord {
   ipMask: string;
 }
 
-/**
- * Check if active valid developer session exists in session/local storage
- */
 export function getActiveDeveloperSession(): DeveloperSession | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.sessionStorage.getItem(DEV_SESSION_STORAGE_KEY) || window.localStorage.getItem(DEV_SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const session = JSON.parse(raw) as DeveloperSession;
-    if (new Date(session.expiresAt).getTime() < Date.now()) {
-      revokeDeveloperSession();
-      return null;
-    }
-    return session;
-  } catch {
+  if (!inMemoryDevSession) return null;
+  if (new Date(inMemoryDevSession.expiresAt).getTime() < Date.now()) {
+    inMemoryDevSession = null;
     return null;
   }
+  return inMemoryDevSession;
 }
 
 /**
- * Authorize developer clearance with developer key
+ * Re-verify the server-configured Administrative Master Key to unmask sensitive PII records.
  */
-export function verifyDeveloperCredentials(developerId: string, keyInput: string): { success: boolean; session?: DeveloperSession; message: string } {
-  const targetDev = AUTHORIZED_DEVELOPERS.find(d => d.developerId === developerId) || AUTHORIZED_DEVELOPERS[0];
-  const cleaned = keyInput.trim();
+export async function verifyDeveloperClearanceWithMasterKey(
+  masterKeyInput: string,
+  operatorRole: 'LEAD_SYSTEM_DEVELOPER' | 'DATA_PRIVACY_OFFICER' = 'DATA_PRIVACY_OFFICER'
+): Promise<{ success: boolean; session?: DeveloperSession; message: string }> {
+  const verification = await verifyAdminMasterKeyForPII(masterKeyInput);
 
-  if (cleaned === targetDev.accessKey || cleaned === targetDev.altKey || cleaned === 'developer' || cleaned === 'admin' || cleaned === 'DEV-SECURE-365!') {
-    const now = new Date();
-    const expires = new Date(now.getTime() + 30 * 60 * 1000); // 30 mins clearance
-    const session: DeveloperSession = {
-      developerId: targetDev.developerId,
-      developerName: targetDev.name,
-      email: targetDev.email,
-      role: targetDev.role,
-      clearanceLevel: targetDev.clearanceLevel,
-      grantedAt: now.toISOString(),
-      expiresAt: expires.toISOString(),
-      authToken: `DEV-JWT-${Math.random().toString(36).substring(2, 10).toUpperCase()}-${Date.now()}`,
-      sessionNonce: `0x${Math.random().toString(16).substring(2, 12)}`,
-    };
-
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem(DEV_SESSION_STORAGE_KEY, JSON.stringify(session));
-      window.localStorage.setItem(DEV_SESSION_STORAGE_KEY, JSON.stringify(session));
-    }
-
+  if (!verification.success) {
     logPrivacyAudit({
-      id: `dlog-${Date.now()}`,
-      timestamp: now.toISOString(),
-      developerId: targetDev.developerId,
-      developerName: targetDev.name,
+      id: `dlog-fail-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      developerId: operatorRole,
+      developerName: 'Unverified Operator',
       action: 'DEVELOPER_LOGIN',
-      reason: 'Developer authenticated into Master Profile Vault under NDPR/FERPA protocol',
-      status: 'AUTHORIZED',
-      ipMask: '127.0.0.1 (Secured Loopback)',
-    });
-
-    recordAuditEvent({
-      userId: targetDev.developerId,
-      userName: targetDev.name,
-      userRole: 'DEVELOPER_ROOT',
-      action: 'RECORD_UPDATED',
-      details: `Developer clearance authenticated for ${targetDev.name}. Session Token: ${session.authToken.slice(0, 14)}...`,
-      ipMask: '127.0.0.1 (Enclave)',
-      status: 'SUCCESS',
+      reason: 'Rejected Master Key re-verification attempt to unmask student profiles',
+      status: 'DENIED',
+      ipMask: 'Enclave Protected',
     });
 
     return {
-      success: true,
-      session,
-      message: `Developer authorization verified for ${targetDev.name}. Privacy Vault unlocked.`
+      success: false,
+      message:
+        verification.message ||
+        'Invalid Administrative Master Key. PII records remain redacted under NDPA/NDPR policy.',
     };
   }
 
+  const now = new Date();
+  const expiresAt = verification.expiresAt || new Date(now.getTime() + 25 * 60 * 1000).toISOString();
+  const displayName =
+    verification.adminName ||
+    (operatorRole === 'DATA_PRIVACY_OFFICER' ? 'Data Privacy Officer' : 'Lead Systems Administrator');
+
+  const session: DeveloperSession = {
+    developerId: operatorRole === 'DATA_PRIVACY_OFFICER' ? 'DPO-MASTER-01' : 'ADM-MASTER-01',
+    developerName: displayName,
+    email: verification.adminEmail || 'privacy@ilearnit365.edu.ng',
+    role: operatorRole,
+    clearanceLevel: 'LEVEL_4_ROOT_DEVELOPER',
+    grantedAt: now.toISOString(),
+    expiresAt,
+    authToken: `DPO-ENCLAVE-${Date.now().toString(36).toUpperCase()}`,
+    sessionNonce: `0x${Math.floor(Math.random() * 1e9).toString(16)}`,
+  };
+
+  inMemoryDevSession = session;
+
   logPrivacyAudit({
-    id: `dlog-fail-${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    developerId,
-    developerName: targetDev.name,
+    id: `dlog-${Date.now()}`,
+    timestamp: now.toISOString(),
+    developerId: session.developerId,
+    developerName: session.developerName,
     action: 'DEVELOPER_LOGIN',
-    reason: 'Failed developer key attempt to access student profiles',
-    status: 'DENIED',
-    ipMask: '127.0.0.1 (Blocked)',
+    reason: 'Master Key re-verified for temporary PII vault access under NDPA/FERPA protocol',
+    status: 'AUTHORIZED',
+    ipMask: 'Server Verified Enclave',
+  });
+
+  recordAuditEvent({
+    userId: session.developerId,
+    userName: session.developerName,
+    userRole: operatorRole,
+    action: 'RECORD_UPDATED',
+    details: `Master Key re-verified for PII unmasking by ${session.developerName}.`,
+    ipMask: 'Server Verified Enclave',
+    status: 'SUCCESS',
   });
 
   return {
-    success: false,
-    message: 'Invalid Developer Access Key. Access to registered profile records is restricted to developers only.'
+    success: true,
+    session,
+    message: `Master Key re-verified for ${session.developerName}. PII unmasking enabled in memory.`,
   };
 }
 
-/**
- * Revoke developer clearance and re-lock vault
- */
 export function revokeDeveloperSession(): void {
-  if (typeof window === 'undefined') return;
-  const current = getActiveDeveloperSession();
+  const current = inMemoryDevSession;
   if (current) {
     logPrivacyAudit({
       id: `dlog-logout-${Date.now()}`,
@@ -153,18 +125,14 @@ export function revokeDeveloperSession(): void {
       developerId: current.developerId,
       developerName: current.developerName,
       action: 'DEVELOPER_LOGOUT',
-      reason: 'Developer session closed. Master Profile Vault re-locked.',
+      reason: 'Privacy clearance closed. Master Profile Vault re-masked.',
       status: 'AUTHORIZED',
-      ipMask: '127.0.0.1 (Secured)',
+      ipMask: 'Server Verified Enclave',
     });
   }
-  window.sessionStorage.removeItem(DEV_SESSION_STORAGE_KEY);
-  window.localStorage.removeItem(DEV_SESSION_STORAGE_KEY);
+  inMemoryDevSession = null;
 }
 
-/**
- * Log a privacy compliance audit record
- */
 export function logPrivacyAudit(record: PrivacyAuditRecord): void {
   if (typeof window === 'undefined') return;
   try {
@@ -178,9 +146,6 @@ export function logPrivacyAudit(record: PrivacyAuditRecord): void {
   }
 }
 
-/**
- * Get privacy audit logs
- */
 export function getPrivacyAuditLogs(): PrivacyAuditRecord[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -190,13 +155,13 @@ export function getPrivacyAuditLogs(): PrivacyAuditRecord[] {
         {
           id: 'dlog-init-01',
           timestamp: new Date().toISOString(),
-          developerId: 'DEV-ROOT-001',
-          developerName: 'Lead Systems Developer',
+          developerId: 'DPO-MASTER-01',
+          developerName: 'Data Privacy Officer',
           action: 'PROFILE_VAULT_ACCESSED',
-          reason: 'Privacy protocol boundary initiated. Profile records set to Developer-Only clearance.',
+          reason: 'Privacy protocol boundary initiated. Plaintext PII requires Master Key re-verification.',
           status: 'AUTHORIZED',
-          ipMask: '127.0.0.1 (Secured Loopback)',
-        }
+          ipMask: 'Server Verified Enclave',
+        },
       ];
     }
     return JSON.parse(raw);
@@ -205,10 +170,7 @@ export function getPrivacyAuditLogs(): PrivacyAuditRecord[] {
   }
 }
 
-/**
- * Utility functions for PII masking when outside Developer View
- */
-export function maskPin(pin: string): string {
+export function maskPin(_pin: string): string {
   return '••••';
 }
 
@@ -229,5 +191,5 @@ export function maskPhone(phone?: string): string {
 export function maskName(name: string): string {
   const parts = name.split(' ');
   if (parts.length === 1) return name;
-  return `${parts[0]} ${parts.slice(1).map(p => p[0] + '.').join(' ')}`;
+  return `${parts[0]} ${parts.slice(1).map((p) => p[0] + '.').join(' ')}`;
 }

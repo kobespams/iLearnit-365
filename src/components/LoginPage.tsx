@@ -27,6 +27,7 @@ import {
   getRegisteredUsers,
   getRegisteredStudents 
 } from '../services/authStorage';
+import { reportPublicActivity } from '../services/emailAndActivityService';
 import { THEME_OPTIONS, applyTheme, getInitialTheme, ThemeMode } from '../utils/theme';
 
 interface LoginPageProps {
@@ -83,6 +84,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       }
 
       const studentDetail = userToStudentDetail(user);
+      void reportPublicActivity({
+        activityType: 'USER_LOGIN_PIN',
+        actorRole: user.role,
+        actorName: user.name,
+        actorEmail: user.email,
+        actorId: user.studentId,
+        targetResource: `${user.role.toUpperCase()} Portal`,
+        details: `Signed in via 4-digit PIN on public gateway (${user.gradeLevel}).`,
+      });
       onLoginSuccess(user.role, studentDetail);
     } else if (loginMethod === 'email') {
       if (!emailInput.trim()) {
@@ -101,12 +111,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       }
 
       const studentDetail = userToStudentDetail(user);
+      void reportPublicActivity({
+        activityType: 'USER_LOGIN_EMAIL',
+        actorRole: user.role,
+        actorName: user.name,
+        actorEmail: user.email,
+        actorId: user.studentId,
+        targetResource: `${user.role.toUpperCase()} Portal`,
+        details: `Signed in via email gateway (${user.gradeLevel}).`,
+      });
       onLoginSuccess(user.role, studentDetail);
     }
   };
 
   const handleQuickSelectUser = (user: RegisteredUser) => {
     const studentDetail = userToStudentDetail(user);
+    void reportPublicActivity({
+      activityType: 'USER_LOGIN_PROFILE',
+      actorRole: user.role,
+      actorName: user.name,
+      actorEmail: user.email,
+      actorId: user.studentId,
+      targetResource: `${user.role.toUpperCase()} Portal`,
+      details: `Accessed ${user.role} dashboard via Registered Profiles selector.`,
+    });
     onLoginSuccess(user.role, studentDetail);
   };
 

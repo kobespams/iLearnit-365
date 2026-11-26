@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { generateWithAI } from '../services/api';
+import { reportPublicActivity } from '../services/emailAndActivityService';
 
 interface SupportTicket {
   id: string;
@@ -114,6 +115,17 @@ export const SupportHelpDeskHub: React.FC<SupportHelpDeskHubProps> = ({ onNaviga
 
     setTickets([newTicket, ...tickets]);
     setTicketSuccess(true);
+
+    void reportPublicActivity({
+      activityType: 'SUPPORT_TICKET_SUBMITTED',
+      actorRole: 'visitor',
+      actorName: ticketName.trim() || 'Public User',
+      actorEmail: ticketEmail.trim() || undefined,
+      actorId: newTicket.id,
+      targetResource: `Support Ticket (${ticketCategory})`,
+      details: `${ticketSubject}: ${ticketDescription.slice(0, 140)}`,
+    });
+
     setTicketSubject('');
     setTicketDescription('');
 

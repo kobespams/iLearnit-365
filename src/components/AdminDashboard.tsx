@@ -9,14 +9,14 @@ import { AdminAuditTrailView } from "./AdminAuditTrailView";
 import { recordAuditAction } from "../services/auditTrailService";
 import {
   getActiveDeveloperSession,
-  verifyDeveloperCredentials,
+  verifyDeveloperClearanceWithMasterKey,
   revokeDeveloperSession,
   maskPin,
   maskEmail,
   maskName,
-  AUTHORIZED_DEVELOPERS,
   DeveloperSession
 } from "../services/developerPrivacyService";
+import { sendAdminEmailOutreach } from "../services/emailAndActivityService";
 
 const FONT_LINK_ID = "ilearnit-fonts";
 
@@ -199,18 +199,21 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
   // Admin Dashboard Tabs: Registrations vs Audit Trail
   const [activeAdminTab, setActiveAdminTab] = useState<'registrations' | 'audit_trail'>('registrations');
 
-  // Developer Privacy Protocol states
-  const [devSession, setDevSession] = useState<DeveloperSession | null>(getActiveDeveloperSession());
+  // Developer / DPO Privacy Protocol states (re-verified via Administrative Master Key)
+  const [devSession, setDevSession] = useState<DeveloperSession | null>(() => getActiveDeveloperSession());
   const [devKeyInput, setDevKeyInput] = useState("");
-  const [selectedDevId, setSelectedDevId] = useState(AUTHORIZED_DEVELOPERS[0].developerId);
+  const [selectedDevRole, setSelectedDevRole] = useState<'DATA_PRIVACY_OFFICER' | 'LEAD_SYSTEM_DEVELOPER'>('DATA_PRIVACY_OFFICER');
   const [devAuthError, setDevAuthError] = useState<string | null>(null);
+  const [devVerifying, setDevVerifying] = useState(false);
   const [unmaskData, setUnmaskData] = useState(false);
   const [showDevAuthModal, setShowDevAuthModal] = useState(false);
 
-  function handleDevAuth(e: React.FormEvent) {
+  async function handleDevAuth(e: React.FormEvent) {
     e.preventDefault();
     setDevAuthError(null);
-    const res = verifyDeveloperCredentials(selectedDevId, devKeyInput);
+    setDevVerifying(true);
+    const res = await verifyDeveloperClearanceWithMasterKey(devKeyInput, selectedDevRole);
+    setDevVerifying(false);
     if (res.success && res.session) {
       setDevSession(res.session);
       setDevKeyInput("");
@@ -220,26 +223,26 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
 
       recordAuditAction({
         category: 'PII_ACCESS',
-        action: 'Developer Privacy Authorization Granted',
+        action: 'Master Key Re-Verified for PII Unmasking',
         actorId: res.session.developerId,
         actorName: res.session.developerName,
         actorRole: res.session.role,
         targetResource: 'Student Registration Master Database',
         status: 'SUCCESS',
         clearanceLevel: 'NDPR Privacy Tier 1',
-        details: `Decrypted masked registration PINs & emails. Token signature: ${res.session.authToken.substring(0, 16)}...`,
+        details: `Decrypted masked registration PINs & emails via server-verified Master Key. Token: ${res.session.authToken.substring(0, 16)}...`,
       });
     } else {
       setDevAuthError(res.message);
       recordAuditAction({
         category: 'PII_ACCESS',
-        action: 'Developer Authorization Failed',
-        actorId: selectedDevId,
-        actorName: 'Unknown / Denied',
+        action: 'Master Key PII Re-Verification Failed',
+        actorId: selectedDevRole,
+        actorName: 'Unverified Operator',
         actorRole: 'UNAUTHORIZED_ATTEMPT',
         targetResource: 'Student Registration Master Database',
         status: 'DENIED',
-        details: `Invalid passkey entered for developer ID: ${selectedDevId}. Clearance denied.`,
+        details: `Invalid Administrative Master Key supplied for PII unmasking (${selectedDevRole}).`,
       });
     }
   }
@@ -251,7 +254,7 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
         action: 'Developer Privacy Session Locked',
         actorId: devSession.developerId,
         actorName: devSession.developerName,
-        actorRole: devSession.roleTitle,
+        actorRole: devSession.role,
         targetResource: 'Student Registration Master Database',
         status: 'INFO',
         clearanceLevel: 'NDPR Vault Locked',
@@ -261,7 +264,7 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
     revokeDeveloperSession();
     setDevSession(null);
     setUnmaskData(false);
-    showToast("Developer session closed. Master Vault re-locked.", "ok");
+    showToast("Privacy vault re-locked. PII fields masked.", "ok");
   }
 
   useEffect(() => {
@@ -360,7 +363,7 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
     });
   }
 
-  function markSent(id: string) {
+  async function markSent(id: string) {
     const target = students.find(s => s.id === id);
     const next = students.map((s) =>
       s.id === id ? { ...s, feedbackSent: true, sentAt: new Date().toISOString() } : s
@@ -368,6 +371,24 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
     persist(next);
 
     if (target) {
+      const result = await sendAdminEmailOutreach({
+        targetMode: "single",
+        recipientEmail: target.email,
+        recipientName: target.name,
+        recipientRole: "student",
+        subject: `iLearnit-365 Orientation Feedback & Verification Letter (${target.regNumber})`,
+        message: `${feedbackBody(target)}\n\n${letterBody(target)}`,
+        activityContext: `Registrar Verification (${target.course} - ${target.subject})`,
+      });
+
+      if (result.success && (result.sentCount || 0) > 0) {
+        showToast(`Email sent via ${result.senderEmail || "ilearnit365@gmail.com"} to ${target.email}`);
+      } else if (result.success) {
+        showToast(`Email queued via ilearnit365@gmail.com (set SMTP_PASS Secret for live SMTP delivery)`);
+      } else {
+        showToast(result.error || "Feedback logged locally; backend SMTP requires active Master Key session.");
+      }
+
       recordAuditAction({
         category: 'FEEDBACK_DISPATCH',
         action: `Orientation Feedback Sent to ${target.name}`,
@@ -375,9 +396,9 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
         actorName: devSession ? devSession.developerName : 'Institutional Registrar',
         actorRole: 'Academic Operations',
         targetResource: `Student: ${target.regNumber}`,
-        status: 'SUCCESS',
+        status: result.success ? 'SUCCESS' : 'INFO',
         clearanceLevel: 'LEVEL_2_REGISTRAR',
-        details: `Dispatched orientation credentials and verification letter to ${target.email}.`,
+        details: `Dispatched orientation credentials and verification letter to ${target.email} via ilearnit365@gmail.com.`,
       });
     }
   }
@@ -1014,15 +1035,14 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
                     style={active.feedbackSent ? styles.disabledBtn : styles.primaryBtn}
                     disabled={active.feedbackSent}
                     onClick={() => {
-                      markSent(active.id);
-                      showToast(`Feedback + letter sent to ${active.email} (simulated)`);
+                      void markSent(active.id);
                     }}
                   >
-                    <Send size={15} /> {active.feedbackSent ? "Already sent" : "Send to student email"}
+                    <Send size={15} /> {active.feedbackSent ? "Already sent" : "Send via ilearnit365@gmail.com"}
                   </button>
                 </div>
                 {active.feedbackSent && (
-                  <div style={styles.sentNote}>Sent {formatDate(active.sentAt)} · this run only simulates delivery.</div>
+                  <div style={styles.sentNote}>Dispatched {formatDate(active.sentAt)} via ilearnit365@gmail.com SMTP relay.</div>
                 )}
               </>
             )}
@@ -1055,42 +1075,26 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
               Registered student profile records and plaintext credentials are strictly protected under NDPR / FERPA privacy protocols and accessible by developers only.
             </div>
 
-            <label style={styles.label}>Select Developer Identity</label>
+            <label style={styles.label}>Operator Clearance Role</label>
             <select
               style={styles.input}
-              value={selectedDevId}
-              onChange={(e) => setSelectedDevId(e.target.value)}
+              value={selectedDevRole}
+              onChange={(e) => setSelectedDevRole(e.target.value as 'DATA_PRIVACY_OFFICER' | 'LEAD_SYSTEM_DEVELOPER')}
             >
-              {AUTHORIZED_DEVELOPERS.map((d) => (
-                <option key={d.developerId} value={d.developerId}>
-                  {d.name} ({d.developerId}) — {d.role}
-                </option>
-              ))}
+              <option value="DATA_PRIVACY_OFFICER">Data Privacy Officer (DPO-MASTER-01)</option>
+              <option value="LEAD_SYSTEM_DEVELOPER">Lead Systems Administrator (ADM-MASTER-01)</option>
             </select>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-              <label style={{ ...styles.label, margin: 0 }}>Developer Secret Key</label>
-              <button
-                type="button"
-                onClick={() => setDevKeyInput("DEV-SECURE-365!")}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#38BDF8",
-                  fontSize: 11,
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                }}
-              >
-                Auto-fill Test Key
-              </button>
+              <label style={{ ...styles.label, margin: 0 }}>Administrative Master Key</label>
+              <span style={{ color: "#94A3B8", fontSize: 11, fontFamily: "monospace" }}>Server-Verified</span>
             </div>
             <input
               style={{ ...styles.input, marginTop: 6 }}
               type="password"
               value={devKeyInput}
               onChange={(e) => setDevKeyInput(e.target.value)}
-              placeholder="Enter developer access key..."
+              placeholder="Re-enter Administrative Master Key..."
               required
             />
 
@@ -1114,15 +1118,17 @@ export default function AdminDashboard({ onNavigateRole, isStandaloneMode = fals
 
             <button
               type="submit"
+              disabled={devVerifying}
               style={{
                 ...styles.primaryBtn,
                 width: "100%",
                 justifyContent: "center",
                 marginTop: 18,
                 background: "linear-gradient(135deg, #7C5CFC, #6366F1)",
+                opacity: devVerifying ? 0.7 : 1,
               }}
             >
-              <Lock size={15} /> Authorize Developer Access
+              <Lock size={15} /> {devVerifying ? "Verifying Master Key..." : "Verify Master Key & Unmask PII"}
             </button>
           </form>
         </div>

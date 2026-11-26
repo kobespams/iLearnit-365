@@ -14,7 +14,7 @@ import { AnnouncementNewslineTicker } from './components/AnnouncementNewslineTic
 import { SwiftPageNavigator } from './components/SwiftPageNavigator';
 import { Footer } from './components/Footer';
 import { applyTheme, getInitialTheme } from './utils/theme';
-import { getActive3FAClearance, revoke3FAClearance, Admin3FASession } from './services/admin3FAService';
+import { getActive3FAClearance, revoke3FAClearance, subscribeAdminSession, Admin3FASession } from './services/admin3FAService';
 import { getRegisteredStudents } from './services/authStorage';
 import { logBackendTabAccess } from './services/auditTrailService';
 import {
@@ -159,6 +159,10 @@ export default function App() {
 
   useEffect(() => {
     setActive3FASession(getActive3FAClearance());
+    const unsub = subscribeAdminSession(() => {
+      setActive3FASession(getActive3FAClearance());
+    });
+    return unsub;
   }, [currentRole]);
 
   const currentUserId = activeStudent?.id || activeStudent?.studentId || 'st-101';

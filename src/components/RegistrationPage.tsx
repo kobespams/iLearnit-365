@@ -44,23 +44,13 @@ import {
 } from 'lucide-react';
 import { 
   generateRealtimePin, 
-  generateRecoveryKey, 
   registerNewUser, 
-  getRegisteredUsers, 
-  getAuditLogs, 
   userToStudentDetail 
 } from '../services/authStorage';
 import {
-  getActiveDeveloperSession,
-  verifyDeveloperCredentials,
-  revokeDeveloperSession,
-  maskPin,
-  maskEmail,
-  maskPhone,
-  maskName,
-  DeveloperSession,
-  AUTHORIZED_DEVELOPERS
-} from '../services/developerPrivacyService';
+  dispatchRegistrationNotifications,
+  RegistrationDispatchReceipt,
+} from '../services/emailAndActivityService';
 
 interface RegistrationPageProps {
   onRegistrationComplete: (role: UserRole, student: StudentDetail) => void;
@@ -127,48 +117,12 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredUserResult, setRegisteredUserResult] = useState<RegisteredUser | null>(null);
-  const [showAuditLogsModal, setShowAuditLogsModal] = useState(false);
-  const [auditLogs, setAuditLogs] = useState<SecurityAuditRecord[]>([]);
-  const [registeredUsersList, setRegisteredUsersList] = useState<RegisteredUser[]>([]);
-
-  // Developer Privacy Protocol states
-  const [devSession, setDevSession] = useState<DeveloperSession | null>(getActiveDeveloperSession());
-  const [devKeyInput, setDevKeyInput] = useState('');
-  const [selectedDevId, setSelectedDevId] = useState(AUTHORIZED_DEVELOPERS[0].developerId);
-  const [devAuthError, setDevAuthError] = useState<string | null>(null);
-  const [unmaskDeveloperData, setUnmaskDeveloperData] = useState(false);
+  const [emailDispatchReceipt, setEmailDispatchReceipt] = useState<RegistrationDispatchReceipt | null>(null);
 
   // Initialize live PIN on mount
   useEffect(() => {
     handleRegeneratePin();
-    refreshRegisteredData();
-    setDevSession(getActiveDeveloperSession());
   }, []);
-
-  const refreshRegisteredData = () => {
-    setRegisteredUsersList(getRegisteredUsers());
-    setAuditLogs(getAuditLogs());
-  };
-
-  const handleDeveloperAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    setDevAuthError(null);
-    const result = verifyDeveloperCredentials(selectedDevId, devKeyInput);
-    if (result.success && result.session) {
-      setDevSession(result.session);
-      setDevKeyInput('');
-      setUnmaskDeveloperData(true);
-    } else {
-      setDevAuthError(result.message);
-    }
-  };
-
-  const handleDeveloperLock = () => {
-    revokeDeveloperSession();
-    setDevSession(null);
-    setUnmaskDeveloperData(false);
-    setDevKeyInput('');
-  };
 
   const handleRegeneratePin = () => {
     setIsGeneratingPin(true);
@@ -230,7 +184,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
 
   const activePin = pinMode === 'auto' ? liveGeneratedPin : customPinInput;
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -299,13 +253,39 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
         parentalConsentEmail: selectedRole === 'student' && ageBracket !== 'adult' ? parentConsentEmail : undefined,
       });
 
+      const receipt = await dispatchRegistrationNotifications(user);
+      setEmailDispatchReceipt(receipt);
       setRegisteredUserResult(user);
-      refreshRegisteredData();
     } catch (err: any) {
       setErrorMessage(err.message || 'Registration failed. Please check your data and retry.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDownloadPass = (user: RegisteredUser) => {
+    const passText = [
+      'iLearnit-365 Digital Academy — Official Registration Pass',
+      '========================================================',
+      `Name: ${user.name}`,
+      `Role: ${user.role.toUpperCase()}`,
+      `Account ID: ${user.studentId}`,
+      `Registered Email: ${user.email}`,
+      `4-Digit Access PIN: ${user.pin}`,
+      `Recovery Key: ${user.recoveryKey}`,
+      `Academic Group: ${user.gradeLevel}`,
+      `Institution: ${user.schoolName || 'iLearnit-365 Digital Academy'}`,
+      `Support Email: ilearnit365@gmail.com`,
+      `Issued At: ${new Date(user.registrationTimestamp).toLocaleString()}`,
+    ].join('\n');
+
+    const blob = new Blob([passText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${user.studentId}-ilearnit365-pass.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleLaunchDashboard = () => {
@@ -407,101 +387,206 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
           </div>
         </div>
 
-        {/* SUCCESS CONFIRMATION MODAL / SCREEN */}
+        {/* SUCCESS CONFIRMATION & RESPONSIVE POST-REGISTRATION MODES */}
         {registeredUserResult ? (
-          <div className="max-w-2xl mx-auto bg-slate-900/90 backdrop-blur-2xl border-2 border-emerald-400/50 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-emerald-500/20 text-center space-y-6 animate-fadeIn relative overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl" />
-            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl" />
+          <div className="max-w-4xl mx-auto bg-slate-900/90 backdrop-blur-2xl border-2 border-emerald-400/50 rounded-3xl p-4 sm:p-8 lg:p-10 shadow-2xl shadow-emerald-500/20 text-center space-y-6 animate-fadeIn relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-400 to-teal-600 text-slate-950 mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <BadgeCheck className="w-12 h-12" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-400 to-teal-600 text-slate-950 mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <BadgeCheck className="w-10 h-10 sm:w-12 sm:h-12" />
             </div>
 
             <div className="space-y-2">
-              <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest bg-emerald-950/60 border border-emerald-400/30 px-3 py-1 rounded-full">
-                ✓ Registration &amp; PIN Issued
+              <span className="inline-block text-[11px] font-mono font-bold text-emerald-300 uppercase tracking-widest bg-emerald-950/60 border border-emerald-400/30 px-3 py-1 rounded-full">
+                Registration &amp; PIN Issued
               </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold font-sora text-white">
+              <h2 className="text-xl sm:text-3xl font-extrabold font-sora text-white px-2">
                 Welcome to iLearnit-365, {registeredUserResult.name}!
               </h2>
-              <p className="text-xs text-slate-300">
-                Your profile has been cryptographically secured in the registry. Keep your credentials safe.
+              <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
+                Your {registeredUserResult.role} profile has been recorded securely. Choose any responsive action mode below to continue.
               </p>
             </div>
 
+            {/* Email Feedback Receipt Banner */}
+            <div
+              className={`rounded-2xl p-4 text-left border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                emailDispatchReceipt?.userFeedbackStatus === 'SENT'
+                  ? 'bg-emerald-950/40 border-emerald-500/40'
+                  : 'bg-blue-950/50 border-blue-500/40'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-cyan-300 shrink-0 mt-0.5">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="space-y-0.5 text-xs">
+                  <div className="font-sora font-bold text-white">
+                    {emailDispatchReceipt?.userFeedbackStatus === 'SENT'
+                      ? `Confirmation email sent from ${emailDispatchReceipt.senderEmail}`
+                      : `Registration receipt logged for ${emailDispatchReceipt?.senderEmail || 'ilearnit365@gmail.com'}`}
+                  </div>
+                  <p className="text-slate-300 leading-relaxed">
+                    {emailDispatchReceipt?.userFeedbackStatus === 'SENT'
+                      ? `We delivered your official registration pass and 4-digit PIN to ${registeredUserResult.email}. Academy administration has also been notified.`
+                      : `Your registration receipt and credentials are queued for ${registeredUserResult.email} via ilearnit365@gmail.com, and academy administration has received your onboarding record.`}
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`self-start sm:self-center shrink-0 text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded-lg border ${
+                  emailDispatchReceipt?.userFeedbackStatus === 'SENT'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : 'bg-amber-500/20 text-amber-200 border-amber-500/40'
+                }`}
+              >
+                {emailDispatchReceipt?.userFeedbackStatus === 'SENT' ? 'Mail Delivered' : 'Queued for Relay'}
+              </span>
+            </div>
+
             {/* Official Digital Pass Credentials Card */}
-            <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-6 text-left space-y-4 relative">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-cyan-400/30 bg-slate-900 p-0.5">
+            <div className="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 sm:p-6 text-left space-y-4 relative">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-cyan-400/30 bg-slate-900 p-0.5 shrink-0">
                     <img
                       src="/src/assets/images/ilearnit_logo_1786816502338.jpg"
-                      alt="Logo"
+                      alt="iLearnit-365 emblem"
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-contain rounded-md"
                     />
                   </div>
                   <div>
-                    <div className="font-sora font-bold text-sm text-white">iLearnit-365 Pass</div>
-                    <div className="text-[10px] font-mono text-slate-400">{registeredUserResult.schoolName}</div>
+                    <div className="font-sora font-bold text-sm text-white">iLearnit-365 Digital Pass</div>
+                    <div className="text-[11px] font-mono text-slate-400">{registeredUserResult.schoolName}</div>
                   </div>
                 </div>
-                <span className="text-[10px] font-mono font-bold text-amber-400 uppercase px-2 py-0.5 rounded bg-amber-950/60 border border-amber-500/30">
+                <span className="text-[10px] font-mono font-bold text-amber-300 uppercase px-2.5 py-1 rounded-lg bg-amber-950/60 border border-amber-500/30">
                   {registeredUserResult.role}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                <div>
-                  <span className="text-slate-500 text-[10px] uppercase">Account ID</span>
-                  <div className="text-slate-200 font-bold truncate">{registeredUserResult.id}</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
+                <div className="bg-slate-900/70 rounded-xl p-3 border border-slate-800/80">
+                  <span className="text-slate-400 text-[10px] uppercase block">Official ID</span>
+                  <div className="text-slate-100 font-bold truncate mt-0.5">{registeredUserResult.studentId}</div>
                 </div>
-                <div>
-                  <span className="text-slate-500 text-[10px] uppercase">Registered Email</span>
-                  <div className="text-slate-200 font-bold truncate">{registeredUserResult.email}</div>
+                <div className="bg-slate-900/70 rounded-xl p-3 border border-slate-800/80">
+                  <span className="text-slate-400 text-[10px] uppercase block">Registered Email</span>
+                  <div className="text-slate-100 font-bold truncate mt-0.5">{registeredUserResult.email}</div>
                 </div>
-                <div>
-                  <span className="text-slate-500 text-[10px] uppercase">Academic Group</span>
-                  <div className="text-slate-200 font-bold">{registeredUserResult.gradeLevel}</div>
+                <div className="bg-slate-900/70 rounded-xl p-3 border border-slate-800/80">
+                  <span className="text-slate-400 text-[10px] uppercase block">Academic Group</span>
+                  <div className="text-slate-100 font-bold truncate mt-0.5">{registeredUserResult.gradeLevel}</div>
                 </div>
-                <div>
-                  <span className="text-slate-500 text-[10px] uppercase">Official Student PIN</span>
-                  <div className="text-emerald-400 font-black text-lg tracking-widest">{registeredUserResult.pin}</div>
+                <div className="bg-emerald-950/40 rounded-xl p-3 border border-emerald-500/30">
+                  <span className="text-emerald-300 text-[10px] uppercase block">Access PIN</span>
+                  <div className="text-emerald-300 font-black text-xl tracking-widest mt-0.5">{registeredUserResult.pin}</div>
                 </div>
               </div>
 
-              <div className="bg-amber-950/30 border border-amber-500/20 rounded-xl p-3 text-[11px] text-amber-300/90 flex items-center justify-between gap-3">
+              <div className="bg-amber-950/30 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <KeyRound className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Recovery Key: <strong className="font-mono">{registeredUserResult.recoveryKey}</strong></span>
+                  <span>
+                    Recovery Key: <strong className="font-mono">{registeredUserResult.recoveryKey}</strong>
+                  </span>
                 </div>
                 <button
-                  onClick={() => handleCopyPin(`iLearnit-365 Credentials:\nName: ${registeredUserResult.name}\nEmail: ${registeredUserResult.email}\nPIN: ${registeredUserResult.pin}\nRecovery: ${registeredUserResult.recoveryKey}`)}
-                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-2.5 py-1 rounded text-[10px] font-mono font-bold transition cursor-pointer"
+                  type="button"
+                  onClick={() =>
+                    handleCopyPin(
+                      `iLearnit-365 Credentials:\nID: ${registeredUserResult.studentId}\nName: ${registeredUserResult.name}\nEmail: ${registeredUserResult.email}\nPIN: ${registeredUserResult.pin}\nRecovery: ${registeredUserResult.recoveryKey}`
+                    )
+                  }
+                  className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold transition cursor-pointer self-start sm:self-auto"
                 >
-                  {isPinCopied ? 'Copied ✓' : 'Copy All'}
+                  {isPinCopied ? 'Copied Credentials' : 'Copy Credentials'}
                 </button>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <button
-                onClick={handleLaunchDashboard}
-                className="flex-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:opacity-95 text-slate-950 font-sora font-extrabold text-sm py-4 rounded-2xl transition shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Launch {registeredUserResult.role === 'teacher' ? 'Teacher Portal' : registeredUserResult.role === 'parent' ? 'Parent Portal' : 'Student Dashboard'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+            {/* Responsive Post-Registration Action Modes */}
+            <div className="space-y-3 text-left">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-slate-300 font-bold">
+                Post-Registration Action Modes
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={handleLaunchDashboard}
+                  className="sm:col-span-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-slate-950 font-sora font-extrabold text-sm p-4 rounded-2xl transition shadow-lg shadow-emerald-500/25 flex items-center justify-between gap-3 cursor-pointer text-left"
+                >
+                  <div>
+                    <div className="text-sm font-extrabold">
+                      Launch {registeredUserResult.role === 'teacher' ? 'Teacher Portal' : registeredUserResult.role === 'parent' ? 'Parent Portal' : 'Student Dashboard'}
+                    </div>
+                    <div className="text-[11px] font-medium text-slate-900/80 mt-0.5">
+                      {registeredUserResult.role === 'teacher'
+                        ? 'Create classes & review AI syllabus tools'
+                        : registeredUserResult.role === 'parent'
+                        ? "Monitor your child's progress & attendance"
+                        : 'Start a lesson or launch JAMB 2000–2025 drills'}
+                    </div>
+                  </div>
+                  <ArrowRight className="w-5 h-5 shrink-0" />
+                </button>
 
-              <button
-                onClick={() => {
-                  setRegisteredUserResult(null);
-                  handleRegeneratePin();
-                }}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs px-5 py-4 rounded-2xl transition border border-slate-700 cursor-pointer"
-              >
-                Register Another User
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPass(registeredUserResult)}
+                  className="bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700 p-4 rounded-2xl transition flex items-center justify-between gap-2 cursor-pointer text-left"
+                >
+                  <div>
+                    <div className="font-sora font-bold text-xs flex items-center gap-1.5">
+                      <Download className="w-3.5 h-3.5 text-cyan-300" />
+                      <span>Download Pass</span>
+                    </div>
+                    <div className="text-[10px] text-slate-300 mt-1">Save offline .txt slip</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700 p-4 rounded-2xl transition flex items-center justify-between gap-2 cursor-pointer text-left"
+                >
+                  <div>
+                    <div className="font-sora font-bold text-xs flex items-center gap-1.5">
+                      <Printer className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Print Slip</span>
+                    </div>
+                    <div className="text-[10px] text-slate-300 mt-1">Paper ID card view</div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={onNavigateToLogin}
+                  className="flex-1 bg-slate-950 hover:bg-slate-800 text-cyan-300 font-sora font-bold text-xs py-3.5 px-5 rounded-2xl transition border border-cyan-500/30 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Go to Sign-In Gateway</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRegisteredUserResult(null);
+                    setEmailDispatchReceipt(null);
+                    setFullName('');
+                    setEmail('');
+                    setPassword('');
+                    handleRegeneratePin();
+                  }}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs py-3.5 px-5 rounded-2xl transition border border-slate-700 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Register Another User</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -1059,191 +1144,6 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
           </div>
         )}
       </div>
-
-      {/* DEVELOPER PRIVACY PROTOCOL AUDIT & PROFILE VAULT MODAL */}
-      {showAuditLogsModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 space-y-5 max-h-[88vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-400">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-sora font-bold text-base text-white flex items-center gap-2">
-                    Registered Profile Records Vault
-                    <span className="text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full">
-                      Developer Clearance Only
-                    </span>
-                  </h3>
-                  <p className="text-[11px] font-mono text-slate-400">
-                    Governed under NDPR, GDPR Art. 9/32 &amp; FERPA Student Data Protection Protocol
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowAuditLogsModal(false)}
-                className="text-slate-400 hover:text-white text-xs font-mono px-2 py-1 rounded-lg bg-slate-800/60 hover:bg-slate-800 cursor-pointer"
-              >
-                ✕ Close
-              </button>
-            </div>
-
-            {/* If NOT authenticated as Developer */}
-            {!devSession ? (
-              <div className="space-y-4 py-2">
-                <div className="bg-amber-950/30 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1 text-xs">
-                    <div className="font-bold text-amber-200 font-sora">Privacy Protocol Restriction Notice</div>
-                    <p className="text-slate-300 leading-relaxed">
-                      Registered student profile records, real-time 4-digit PINs, and personal contact details are 
-                      <strong className="text-amber-300"> restricted strictly to authorized developers and data privacy officers</strong>. 
-                      Standard visitors, students, and unverified users cannot view plaintext registries.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Developer Authentication Form */}
-                <form onSubmit={handleDeveloperAuth} className="bg-slate-950 rounded-2xl border border-slate-800 p-5 space-y-4">
-                  <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 font-sora">
-                    <KeyRound className="w-4 h-4" />
-                    <span>Developer Identity &amp; Key Verification</span>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono text-slate-400 mb-1.5">Select Developer Identity</label>
-                    <select
-                      value={selectedDevId}
-                      onChange={(e) => setSelectedDevId(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-200 outline-none focus:border-cyan-400"
-                    >
-                      {AUTHORIZED_DEVELOPERS.map(d => (
-                        <option key={d.developerId} value={d.developerId}>
-                          {d.name} ({d.developerId}) — {d.role}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-mono text-slate-400">Developer Access Key</label>
-                      <button
-                        type="button"
-                        onClick={() => setDevKeyInput('DEV-SECURE-365!')}
-                        className="text-[10px] font-mono text-cyan-400 hover:underline cursor-pointer"
-                      >
-                        Auto-fill Test Developer Key
-                      </button>
-                    </div>
-                    <input
-                      type="password"
-                      value={devKeyInput}
-                      onChange={(e) => setDevKeyInput(e.target.value)}
-                      placeholder="Enter Developer Secret Passkey..."
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-cyan-400 font-mono"
-                    />
-                  </div>
-
-                  {devAuthError && (
-                    <div className="text-xs font-mono text-rose-400 bg-rose-950/40 border border-rose-500/30 p-2.5 rounded-xl flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{devAuthError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-sora font-bold text-xs py-3 rounded-xl transition shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>Authorize Developer Clearance</span>
-                  </button>
-                </form>
-
-                {/* Masked Preview of Registry Stats */}
-                <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-[11px] font-mono text-slate-400 flex items-center justify-between">
-                  <span>Encrypted Registered Profiles in Storage:</span>
-                  <span className="text-cyan-300 font-bold">{registeredUsersList.length} Records (AES-256 Guarded)</span>
-                </div>
-              </div>
-            ) : (
-              /* If AUTHENTICATED as Developer */
-              <div className="space-y-4">
-                <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold">
-                      <Check className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-emerald-200 font-sora">
-                        Active Developer Session: {devSession.developerName}
-                      </div>
-                      <div className="text-[10px] font-mono text-emerald-400/80">
-                        Token: {devSession.authToken.slice(0, 18)}... • Level 4 Root Clearance
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setUnmaskDeveloperData(!unmaskDeveloperData)}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      {unmaskDeveloperData ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      <span>{unmaskDeveloperData ? 'Mask PII' : 'Unmask PII'}</span>
-                    </button>
-
-                    <button
-                      onClick={handleDeveloperLock}
-                      className="px-2.5 py-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-xs font-mono text-rose-300 border border-rose-500/30 flex items-center gap-1 cursor-pointer"
-                    >
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>Lock Vault</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="text-xs font-mono text-slate-400 flex items-center justify-between">
-                  <span>Registered Accounts ({registeredUsersList.length}):</span>
-                  <span className="text-emerald-400 text-[10px]">
-                    Status: {unmaskDeveloperData ? 'Developer Decrypted' : 'Safe Redaction Mode'}
-                  </span>
-                </div>
-
-                <div className="divide-y divide-slate-800 bg-slate-950 rounded-2xl border border-slate-800 p-2 max-h-72 overflow-y-auto">
-                  {registeredUsersList.map((u) => (
-                    <div key={u.id} className="p-3 text-xs font-mono flex items-center justify-between gap-2">
-                      <div>
-                        <div className="text-slate-200 font-bold">
-                          {unmaskDeveloperData ? u.name : maskName(u.name)}
-                        </div>
-                        <div className="text-slate-500 text-[10px]">
-                          {unmaskDeveloperData ? u.email : maskEmail(u.email)} • {u.role}
-                        </div>
-                        {u.parentName && (
-                          <div className="text-slate-600 text-[10px]">
-                            Parent: {unmaskDeveloperData ? u.parentName : maskName(u.parentName)} ({unmaskDeveloperData ? u.parentPhone : maskPhone(u.parentPhone)})
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <span className="text-emerald-400 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/30">
-                          PIN: {unmaskDeveloperData ? u.pin : maskPin(u.pin)}
-                        </span>
-                        <div className="text-[10px] text-slate-500 mt-1 font-mono">
-                          ID: {u.studentId}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

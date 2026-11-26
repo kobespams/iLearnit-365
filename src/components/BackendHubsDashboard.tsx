@@ -7,7 +7,7 @@ import {
   Layers, Users, FileText, Download, Zap, Eye, ShieldAlert,
   HardDrive, Globe, Network, Compass
 } from 'lucide-react';
-import { getActive3FAClearance, revoke3FAClearance, Admin3FASession } from '../services/admin3FAService';
+import { getActive3FAClearance, subscribeAdminSession, Admin3FASession } from '../services/admin3FAService';
 import { getSystemAuditTrail, AuditTrailRecord } from '../services/auditTrailService';
 import AdminDashboard from './AdminDashboard';
 import { ChealSecureHub } from './ChealSecureHub';
@@ -34,6 +34,10 @@ export const BackendHubsDashboard: React.FC<BackendHubsDashboardProps> = ({
   useEffect(() => {
     setActive3FA(getActive3FAClearance());
     setAuditLogs(getSystemAuditTrail().slice(0, 15));
+    const unsub = subscribeAdminSession(() => {
+      setActive3FA(getActive3FAClearance());
+    });
+    return unsub;
   }, [activeSubTab]);
 
   const handleRefresh = () => {

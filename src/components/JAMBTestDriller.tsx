@@ -41,6 +41,7 @@ import { generateContent } from '../services/api';
 import { AITransparencyPanel } from './AITransparencyPanel';
 import { saveAIOutputRecord } from '../services/aiTransparencyService';
 import { recordAuditAction } from '../services/auditTrailService';
+import { reportPublicActivity } from '../services/emailAndActivityService';
 
 function shuffleFisherYates<T>(items: T[]): T[] {
   const arr = [...items];
@@ -396,6 +397,14 @@ export const JAMBTestDriller: React.FC<JAMBTestDrillerProps> = ({
       targetResource: `JAMB Test Driller (${sessionQuestions.length} Qs)`,
       status: 'SUCCESS',
       details: `Score: ${correctCount}/${sessionQuestions.length} (${utmeScore400}/400 UTME scale). Subjects: ${attempt.subjects.join(', ')}.`,
+    });
+
+    void reportPublicActivity({
+      activityType: 'JAMB_DRILL_COMPLETED',
+      actorRole: 'student',
+      actorName: studentName,
+      targetResource: `JAMB ${drillMode} (${selectedStream})`,
+      details: `Scored ${correctCount}/${sessionQuestions.length} (${utmeScore400}/400 UTME) across ${attempt.subjects.join(', ')}.`,
     });
   };
 
